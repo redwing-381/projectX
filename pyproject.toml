@@ -1,0 +1,72 @@
+[project]
+name = "projectx"
+version = "0.1.0"
+description = "Smart notification bridge - monitors email, detects urgency with AI, sends SMS alerts"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your@email.com"}
+]
+keywords = ["ai", "agents", "notifications", "email", "sms", "digital-detox"]
+
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "crewai>=0.28.0",
+    "openai>=1.12.0",
+    "typer>=0.9.0",
+    "rich>=13.7.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.26.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.1.0",
+    "sqlalchemy>=2.0.25",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
+    "google-auth>=2.27.0",
+    "google-auth-oauthlib>=1.2.0",
+    "google-api-python-client>=2.116.0",
+    "twilio>=8.13.0",
+    "jinja2>=3.1.3",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "black>=24.1.0",
+    "isort>=5.13.0",
+    "mypy>=1.8.0",
+    "ruff>=0.2.0",
+]
+
+[project.scripts]
+projectx = "cli.main:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
