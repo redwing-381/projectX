@@ -1,9 +1,3 @@
 {
-  "hooks": {
-    "stop": [
-      {
-        "command": "echo '📝 Remember to update DEVLOG.md with your progress!'"
-      }
-    ]
-  }
+  "hooks": {}
 }

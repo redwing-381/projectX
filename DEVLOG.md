@@ -263,3 +263,137 @@ Created `.kiro/prompts/update-devlog.md` — prompt to help update the log.
 3. Environment setup
 
 ---
+
+## MVP Implementation - January 11, 2026
+
+### Task 1: Configuration and Data Models
+
+**Time spent:** ~10 min
+
+**Files created:**
+- `src/config.py` — Pydantic settings with env var loading
+- `src/models/schemas.py` — Email, Classification, Urgency, AlertResult, PipelineResult models
+
+### Task 2: Gmail Service
+
+**Time spent:** ~15 min
+
+**Files created:**
+- `src/services/gmail.py` — GmailService class with OAuth, email fetching, data extraction
+
+**Key features:**
+- OAuth 2.0 authentication with token caching
+- Fetch unread emails from inbox
+- Extract sender, subject, snippet from raw messages
+
+### Task 3: Classifier Agent
+
+**Time spent:** ~15 min
+
+**Files created:**
+- `src/agents/classifier.py` — ClassifierAgent using OpenAI GPT-4o-mini
+
+**Key features:**
+- LLM-based urgency classification
+- Returns URGENT or NOT_URGENT with reason
+- Graceful error handling (defaults to NOT_URGENT on failure)
+
+### Task 4: Twilio Service
+
+**Time spent:** ~10 min
+
+**Files created:**
+- `src/services/twilio_sms.py` — TwilioService for SMS alerts
+
+**Key features:**
+- Format email into SMS (max 160 chars)
+- Send SMS via Twilio API
+- Error handling with logging
+
+### Task 5: Pipeline Orchestrator
+
+**Time spent:** ~10 min
+
+**Files created:**
+- `src/services/pipeline.py` — Pipeline class orchestrating the flow
+
+**Key features:**
+- Wires Gmail → Classifier → Twilio
+- Processes each email and tracks results
+- Returns PipelineResult with stats
+
+### Task 6: FastAPI Endpoints
+
+**Time spent:** ~15 min
+
+**Files created:**
+- `src/main.py` — FastAPI app with /health and /check endpoints
+
+**Key features:**
+- GET /health — returns status
+- POST /check — runs full pipeline
+- Lifespan handler initializes all services
+
+### MVP Status
+
+**Completed:**
+- [x] Config and models
+- [x] Gmail Service
+- [x] Classifier Agent
+- [x] Twilio Service
+- [x] Pipeline Orchestrator
+- [x] FastAPI endpoints
+
+**Next:** Test with real credentials
+
+---
+
+### MVP Testing Complete! 🎉
+
+**Time spent:** ~45 min
+
+**What was tested:**
+
+1. **Gmail OAuth Flow**
+   - Created Google Cloud project with Gmail API enabled
+   - Set up OAuth consent screen (test mode)
+   - Created Desktop app credentials
+   - Successfully authenticated and created `token.json`
+
+2. **Email Fetching**
+   - Fetched 10 unread emails from inbox
+   - Correctly extracted sender, subject, snippet
+
+3. **AI Classification**
+   - All 10 emails correctly classified as NOT_URGENT:
+     - Bank alerts → NOT_URGENT ✅
+     - LinkedIn notifications → NOT_URGENT ✅
+     - Promotional emails → NOT_URGENT ✅
+     - Hackathon updates → NOT_URGENT ✅
+   - Test urgent email classified as URGENT ✅
+
+4. **SMS Alerts**
+   - Purchased Twilio trial number: +1 878 222 3364
+   - Verified recipient number (keypad phone)
+   - Successfully sent SMS alert to keypad phone!
+
+**Test Results:**
+```
+POST /check → 10 emails checked, 0 alerts (all correctly NOT_URGENT)
+POST /test-urgent → Simulated urgent email, SMS sent successfully!
+```
+
+**MVP is fully functional:**
+- ✅ Gmail OAuth authentication
+- ✅ Email fetching (unread from inbox)
+- ✅ AI urgency classification (GPT-4o-mini via OpenRouter)
+- ✅ SMS alerts via Twilio
+
+**Next Steps:**
+- [ ] Deploy to Railway
+- [ ] Build CLI client
+- [ ] Add VIP sender rules
+- [ ] Add keyword rules
+- [ ] Web dashboard
+
+---

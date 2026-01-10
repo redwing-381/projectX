@@ -57,3 +57,12 @@ Provide summary:
 - Files created/modified
 - Test results
 - Validation results
+
+## IMPORTANT: Update DEVLOG
+
+After completing the feature, you MUST update DEVLOG.md with:
+- What was built
+- Files created/modified
+- Time spent (estimate)
+- Any decisions or challenges
+- Kiro CLI usage notes
