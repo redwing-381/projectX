@@ -9,6 +9,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 
+# Load .env file before reading DATABASE_URL
+from dotenv import load_dotenv
+load_dotenv()
+
 
 def get_database_url() -> str:
     """Get database URL from environment."""

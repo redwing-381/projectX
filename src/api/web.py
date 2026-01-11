@@ -311,9 +311,11 @@ async def settings_page(request: Request):
     phone = settings.alert_phone_number
     phone_masked = f"***-***-{phone[-4:]}" if phone and len(phone) >= 4 else "Not configured"
     
-    # Get counts
+    # Get counts and monitoring settings
     vip_count = 0
     keyword_count = 0
+    monitoring_enabled = False
+    check_interval = 5
     db_connected = is_db_connected()
     telegram_connected = bool(settings.telegram_api_id and settings.telegram_session)
     
@@ -324,6 +326,8 @@ async def settings_page(request: Request):
             try:
                 vip_count = len(crud.get_vip_senders(db))
                 keyword_count = len(crud.get_keywords(db))
+                monitoring_enabled = crud.get_monitoring_enabled(db)
+                check_interval = crud.get_check_interval(db)
             finally:
                 db.close()
         except Exception as e:
@@ -333,7 +337,8 @@ async def settings_page(request: Request):
         "request": request,
         "active_page": "settings",
         "phone_masked": phone_masked,
-        "monitoring_active": not settings.monitoring_paused,
+        "monitoring_enabled": monitoring_enabled,
+        "check_interval": check_interval,
         "db_connected": db_connected,
         "telegram_connected": telegram_connected,
         "vip_count": vip_count,
@@ -341,12 +346,138 @@ async def settings_page(request: Request):
     })
 
 
+@router.post("/settings/toggle-scheduled-monitoring")
+async def toggle_scheduled_monitoring():
+    """Toggle scheduled monitoring on/off."""
+    if engine is not None:
+        try:
+            from src.db.database import SessionLocal
+            db = SessionLocal()
+            try:
+                current = crud.get_monitoring_enabled(db)
+                crud.set_monitoring_enabled(db, not current)
+                logger.info(f"Scheduled monitoring {'disabled' if current else 'enabled'}")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Could not toggle monitoring: {e}")
+    
+    return RedirectResponse("/settings", status_code=303)
+
+
+@router.post("/settings/set-interval")
+async def set_check_interval(interval: int = Form(...)):
+    """Set the email check interval."""
+    if engine is not None:
+        try:
+            from src.db.database import SessionLocal
+            db = SessionLocal()
+            try:
+                crud.set_check_interval(db, interval)
+                logger.info(f"Check interval set to {interval} minutes")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Could not set interval: {e}")
+    
+    return RedirectResponse("/settings", status_code=303)
+
+
 @router.post("/settings/toggle-monitoring")
 async def toggle_monitoring():
-    """Toggle monitoring status.
+    """Toggle monitoring status (legacy endpoint).
     
-    TODO: Implement actual toggle functionality.
-    Currently just redirects - would need to update a database setting
-    or environment variable in production.
+    Redirects to the new toggle endpoint.
     """
-    return RedirectResponse("/settings", status_code=303)
+    return await toggle_scheduled_monitoring()
+
+
+# =============================================================================
+# API Endpoints for CLI
+# =============================================================================
+
+@router.get("/api/monitoring")
+async def get_monitoring_status():
+    """Get current monitoring status (for CLI)."""
+    from src.main import monitoring_running
+    
+    enabled = False
+    interval = 5
+    
+    if engine is not None:
+        try:
+            from src.db.database import SessionLocal
+            db = SessionLocal()
+            try:
+                enabled = crud.get_monitoring_enabled(db)
+                interval = crud.get_check_interval(db)
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning(f"Could not fetch monitoring status: {e}")
+    
+    return {
+        "enabled": enabled,
+        "running": monitoring_running,
+        "interval_minutes": interval,
+    }
+
+
+@router.post("/api/monitoring/start")
+async def start_monitoring():
+    """Enable scheduled monitoring (for CLI)."""
+    if engine is not None:
+        try:
+            from src.db.database import SessionLocal
+            db = SessionLocal()
+            try:
+                crud.set_monitoring_enabled(db, True)
+            finally:
+                db.close()
+            return {"success": True, "message": "Scheduled monitoring enabled"}
+        except Exception as e:
+            logger.error(f"Could not enable monitoring: {e}")
+            return {"success": False, "error": str(e)}
+    
+    return {"success": False, "error": "Database not connected"}
+
+
+@router.post("/api/monitoring/stop")
+async def stop_monitoring():
+    """Disable scheduled monitoring (for CLI)."""
+    if engine is not None:
+        try:
+            from src.db.database import SessionLocal
+            db = SessionLocal()
+            try:
+                crud.set_monitoring_enabled(db, False)
+            finally:
+                db.close()
+            return {"success": True, "message": "Scheduled monitoring disabled"}
+        except Exception as e:
+            logger.error(f"Could not disable monitoring: {e}")
+            return {"success": False, "error": str(e)}
+    
+    return {"success": False, "error": "Database not connected"}
+
+
+@router.post("/api/monitoring/interval")
+async def set_monitoring_interval(minutes: int = Form(...)):
+    """Set monitoring interval (for CLI)."""
+    if minutes < 1 or minutes > 1440:
+        return {"success": False, "error": "Interval must be between 1 and 1440 minutes"}
+    
+    if engine is not None:
+        try:
+            from src.db.database import SessionLocal
+            db = SessionLocal()
+            try:
+                crud.set_check_interval(db, minutes)
+            finally:
+                db.close()
+            return {"success": True, "message": f"Interval set to {minutes} minutes"}
+        except Exception as e:
+            logger.error(f"Could not set interval: {e}")
+            return {"success": False, "error": str(e)}
+    
+    return {"success": False, "error": "Database not connected"}

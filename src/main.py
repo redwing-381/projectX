@@ -25,12 +25,14 @@ pipeline = None
 startup_error = None
 telegram_userbot = None
 telegram_userbot_task = None
+monitoring_task = None
+monitoring_running = False
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
-    global pipeline, startup_error, telegram_userbot, telegram_userbot_task
+    global pipeline, startup_error, telegram_userbot, telegram_userbot_task, monitoring_task, monitoring_running
 
     try:
         settings = get_settings()
@@ -93,6 +95,10 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Pipeline initialized successfully")
 
+        # Start scheduled monitoring if enabled
+        monitoring_task = asyncio.create_task(scheduled_monitoring_loop())
+        logger.info("Scheduled monitoring task started")
+
         # Start Telegram userbot if configured
         if settings.telegram_api_id and settings.telegram_api_hash and settings.telegram_session:
             try:
@@ -115,9 +121,64 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down...")
+    monitoring_running = False
+    if monitoring_task:
+        monitoring_task.cancel()
+        try:
+            await monitoring_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("Monitoring task stopped")
     if telegram_userbot:
         await telegram_userbot.stop()
         logger.info("Telegram userbot stopped")
+
+
+async def scheduled_monitoring_loop():
+    """Background task that runs email checks at configured intervals."""
+    global pipeline, monitoring_running
+    
+    while True:
+        try:
+            # Check if monitoring is enabled
+            from src.db.database import get_db_session, engine
+            
+            if engine is None:
+                logger.debug("Database not available, skipping scheduled check")
+                await asyncio.sleep(60)
+                continue
+            
+            try:
+                with get_db_session() as db:
+                    from src.db import crud
+                    enabled = crud.get_monitoring_enabled(db)
+                    interval = crud.get_check_interval(db)
+            except Exception as db_error:
+                logger.debug(f"Could not read monitoring settings: {db_error}")
+                await asyncio.sleep(60)
+                continue
+            
+            if enabled and pipeline is not None:
+                monitoring_running = True
+                logger.info(f"Scheduled email check starting (interval: {interval} min)")
+                try:
+                    result = await pipeline.run()
+                    logger.info(f"Scheduled check complete: {result.emails_checked} emails, {result.alerts_sent} alerts")
+                except Exception as check_error:
+                    logger.error(f"Scheduled check failed: {check_error}")
+            else:
+                monitoring_running = False
+            
+            # Sleep for the configured interval (or 60s if not enabled)
+            sleep_seconds = interval * 60 if enabled else 60
+            await asyncio.sleep(sleep_seconds)
+            
+        except asyncio.CancelledError:
+            logger.info("Scheduled monitoring loop cancelled")
+            break
+        except Exception as e:
+            logger.error(f"Error in monitoring loop: {e}")
+            await asyncio.sleep(60)
 
 
 async def start_telegram_userbot(settings, twilio):

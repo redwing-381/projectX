@@ -240,3 +240,32 @@ def get_all_settings(db: Session) -> dict:
     """Get all settings as a dictionary."""
     settings = db.query(Settings).all()
     return {s.key: s.value for s in settings}
+
+
+# =============================================================================
+# Monitoring Settings Operations
+# =============================================================================
+
+def get_monitoring_enabled(db: Session) -> bool:
+    """Check if scheduled monitoring is enabled."""
+    value = get_setting(db, "monitoring_enabled", "false")
+    return value.lower() == "true"
+
+
+def set_monitoring_enabled(db: Session, enabled: bool) -> None:
+    """Enable or disable scheduled monitoring."""
+    set_setting(db, "monitoring_enabled", "true" if enabled else "false")
+
+
+def get_check_interval(db: Session) -> int:
+    """Get the email check interval in minutes."""
+    value = get_setting(db, "check_interval_minutes", "5")
+    try:
+        return int(value)
+    except ValueError:
+        return 5
+
+
+def set_check_interval(db: Session, minutes: int) -> None:
+    """Set the email check interval in minutes."""
+    set_setting(db, "check_interval_minutes", str(minutes))

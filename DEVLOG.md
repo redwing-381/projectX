@@ -794,3 +794,92 @@ TELEGRAM_SESSION=your-session-string
 **Note:** Stats only persist when DATABASE_URL is configured (works on Railway with PostgreSQL).
 
 ---
+
+
+## Scheduled Monitoring System - January 11, 2026
+
+### Task: Add Scheduled Email Monitoring with Enable/Disable Controls
+
+**Goal:** Allow users to enable automatic email checking at configurable intervals, controllable via both web UI and CLI.
+
+### Implementation
+
+**Database Layer:**
+- Added monitoring settings CRUD functions in `src/db/crud.py`:
+  - `get_monitoring_enabled()` / `set_monitoring_enabled()`
+  - `get_check_interval()` / `set_check_interval()`
+- Uses existing Settings table with key-value pairs
+
+**Background Scheduler:**
+- Added `scheduled_monitoring_loop()` in `src/main.py`
+- Runs as asyncio background task alongside server
+- Checks database for enabled status and interval
+- Runs email pipeline at configured intervals when enabled
+- Gracefully handles database unavailability
+
+**Web UI (Settings Page):**
+- New "Scheduled Email Monitoring" section with:
+  - Enable/Disable toggle button
+  - Interval selector (1, 2, 5, 10, 15, 30, 60 minutes)
+  - Current status display
+- Endpoints: `/settings/toggle-scheduled-monitoring`, `/settings/set-interval`
+
+**CLI Commands:**
+- Added `monitor` subcommand group:
+  - `projectx monitor status` - Show monitoring status
+  - `projectx monitor start` - Enable scheduled monitoring
+  - `projectx monitor stop` - Disable scheduled monitoring
+  - `projectx monitor set-interval <minutes>` - Set check interval
+- All commands support `--json` flag
+
+**API Endpoints (for CLI):**
+- `GET /api/monitoring` - Get current status
+- `POST /api/monitoring/start` - Enable monitoring
+- `POST /api/monitoring/stop` - Disable monitoring
+- `POST /api/monitoring/interval` - Set interval
+
+### Files Modified
+
+- `src/db/crud.py` - Added monitoring settings functions
+- `src/main.py` - Added background scheduler task
+- `src/api/web.py` - Added web and API endpoints
+- `src/templates/settings.html` - New monitoring controls UI
+- `cli/main.py` - Added monitor subcommand group
+- `cli/client.py` - Added `_get` and `_post` helper methods
+
+### Test Results
+
+```bash
+$ projectx monitor status
+Scheduled Monitoring Status
+○ Disabled
+  Interval: 5 minutes (when enabled)
+
+$ projectx monitor --help
+Commands:
+  status         Show current monitoring status.
+  start          Enable scheduled email monitoring.
+  stop           Disable scheduled email monitoring.
+  set-interval   Set the email check interval.
+```
+
+Web UI shows monitoring controls with enable/disable button and interval dropdown.
+
+### Notes
+
+- Requires DATABASE_URL to be set for persistence
+- Works on Railway with PostgreSQL
+- Background task starts automatically on server startup
+
+### Bug Fixes
+
+**Database not loading locally:**
+- Fixed `src/db/database.py` to load `.env` file before reading `DATABASE_URL`
+- Added `from dotenv import load_dotenv; load_dotenv()` at module start
+- This ensures DATABASE_URL is available when the module initializes
+
+**CLI Help Command:**
+- Added `projectx help` command that shows all available commands in a formatted table
+- Lists main commands, config commands, and monitor commands
+
+---

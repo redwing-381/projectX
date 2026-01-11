@@ -18,6 +18,53 @@
         </div>
     </div>
 
+    <!-- Scheduled Monitoring -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-lg font-semibold mb-4">Scheduled Email Monitoring</h2>
+        <p class="text-gray-400 mb-4">Automatically check emails at regular intervals.</p>
+        
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <p class="text-gray-400">Scheduled monitoring is:</p>
+                <p class="text-2xl font-bold mt-2 {% if monitoring_enabled %}text-green-400{% else %}text-gray-400{% endif %}">
+                    {% if monitoring_enabled %}Enabled{% else %}Disabled{% endif %}
+                </p>
+                {% if monitoring_enabled %}
+                <p class="text-gray-500 text-sm mt-1">Checking every {{ check_interval }} minutes</p>
+                {% endif %}
+            </div>
+            <form action="/settings/toggle-scheduled-monitoring" method="post">
+                {% if monitoring_enabled %}
+                <button type="submit" class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-medium">
+                    ⏹️ Disable
+                </button>
+                {% else %}
+                <button type="submit" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium">
+                    ▶️ Enable
+                </button>
+                {% endif %}
+            </form>
+        </div>
+        
+        <div class="border-t border-gray-700 pt-4">
+            <form action="/settings/set-interval" method="post" class="flex items-center gap-4">
+                <label class="text-gray-400">Check interval:</label>
+                <select name="interval" class="bg-gray-700 rounded-lg px-4 py-2 text-white">
+                    <option value="1" {% if check_interval == 1 %}selected{% endif %}>1 minute</option>
+                    <option value="2" {% if check_interval == 2 %}selected{% endif %}>2 minutes</option>
+                    <option value="5" {% if check_interval == 5 %}selected{% endif %}>5 minutes</option>
+                    <option value="10" {% if check_interval == 10 %}selected{% endif %}>10 minutes</option>
+                    <option value="15" {% if check_interval == 15 %}selected{% endif %}>15 minutes</option>
+                    <option value="30" {% if check_interval == 30 %}selected{% endif %}>30 minutes</option>
+                    <option value="60" {% if check_interval == 60 %}selected{% endif %}>1 hour</option>
+                </select>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium">
+                    Save
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Telegram Status -->
     <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
         <h2 class="text-lg font-semibold mb-4">Telegram Monitoring</h2>
@@ -34,30 +81,6 @@
                 {% endif %}
             </div>
             <span class="text-4xl">{% if telegram_connected %}📱{% else %}📵{% endif %}</span>
-        </div>
-    </div>
-
-    <!-- Monitoring Status -->
-    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 class="text-lg font-semibold mb-4">Email Monitoring Status</h2>
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-gray-400">Email monitoring is currently:</p>
-                <p class="text-2xl font-bold mt-2 {% if monitoring_active %}text-green-400{% else %}text-yellow-400{% endif %}">
-                    {% if monitoring_active %}Active{% else %}Paused{% endif %}
-                </p>
-            </div>
-            <form action="/settings/toggle-monitoring" method="post">
-                {% if monitoring_active %}
-                <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 px-6 py-3 rounded-lg font-medium">
-                    ⏸️ Pause Monitoring
-                </button>
-                {% else %}
-                <button type="submit" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium">
-                    ▶️ Resume Monitoring
-                </button>
-                {% endif %}
-            </form>
         </div>
     </div>
 

@@ -35,12 +35,13 @@ class ProjectXClient:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
-    def _request(self, method: str, endpoint: str) -> Dict[str, Any]:
+    def _request(self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Make an HTTP request to the server.
 
         Args:
             method: HTTP method (GET, POST, etc.)
             endpoint: API endpoint path.
+            data: Optional form data for POST requests.
 
         Returns:
             Response JSON as dictionary.
@@ -56,7 +57,10 @@ class ProjectXClient:
                 if method.upper() == "GET":
                     response = client.get(url)
                 elif method.upper() == "POST":
-                    response = client.post(url)
+                    if data:
+                        response = client.post(url, data=data)
+                    else:
+                        response = client.post(url)
                 else:
                     raise ValueError(f"Unsupported method: {method}")
 
@@ -78,6 +82,14 @@ class ProjectXClient:
             raise ConnectionError("Request timed out")
         except httpx.RequestError as e:
             raise ConnectionError(f"Request failed: {str(e)}")
+
+    def _get(self, endpoint: str) -> Dict[str, Any]:
+        """Make a GET request."""
+        return self._request("GET", endpoint)
+
+    def _post(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Make a POST request."""
+        return self._request("POST", endpoint, data)
 
     def health(self) -> Dict[str, Any]:
         """Check server health.
