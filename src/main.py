@@ -1,6 +1,7 @@
 """FastAPI application for ProjectX."""
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -8,10 +9,6 @@ from fastapi.responses import JSONResponse
 
 from src.config import get_settings
 from src.models.schemas import HealthResponse, CheckResponse, PipelineResult
-from src.services.gmail import GmailService
-from src.services.twilio_sms import TwilioService
-from src.services.pipeline import Pipeline
-from src.agents.classifier import ClassifierAgent
 
 # Configure logging
 logging.basicConfig(
@@ -21,35 +18,46 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Global pipeline instance
-pipeline: Pipeline | None = None
+pipeline = None
+startup_error = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
-    global pipeline
+    global pipeline, startup_error
 
-    settings = get_settings()
-    logger.info(f"Starting {settings.app_name}...")
-
-    # Initialize services
     try:
+        settings = get_settings()
+        logger.info(f"Starting {settings.app_name}...")
+        logger.info(f"Environment: {'Railway' if os.environ.get('RAILWAY_ENVIRONMENT') else 'Local'}")
+
+        # Import services here to catch import errors
+        from src.services.gmail import GmailService
+        from src.services.twilio_sms import TwilioService
+        from src.services.pipeline import Pipeline
+        from src.agents.classifier import ClassifierAgent
+
+        # Initialize services
         gmail = GmailService(
             credentials_path=settings.google_credentials_path,
             token_path=settings.google_token_path,
         )
+        logger.info("Gmail service created")
 
         classifier = ClassifierAgent(
             api_key=settings.llm_api_key,
             base_url=settings.llm_base_url,
             model=settings.llm_model,
         )
+        logger.info("Classifier agent created")
 
         twilio = TwilioService(
             account_sid=settings.twilio_account_sid,
             auth_token=settings.twilio_auth_token,
             from_number=settings.twilio_phone_number,
         )
+        logger.info("Twilio service created")
 
         pipeline = Pipeline(
             gmail=gmail,
@@ -57,12 +65,14 @@ async def lifespan(app: FastAPI):
             twilio=twilio,
             alert_phone=settings.alert_phone_number,
         )
-
-        logger.info("All services initialized successfully")
+        logger.info("Pipeline initialized successfully")
 
     except Exception as e:
+        startup_error = str(e)
         logger.error(f"Failed to initialize services: {e}")
-        # Continue anyway - health check will work, but /check will fail
+        import traceback
+        logger.error(traceback.format_exc())
+        # Don't raise - let the app start so healthcheck works
 
     yield
 
@@ -80,8 +90,17 @@ app = FastAPI(
 @app.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
     """Health check endpoint."""
-    settings = get_settings()
-    return HealthResponse(status="ok", app_name=settings.app_name)
+    return HealthResponse(status="ok", app_name="ProjectX")
+
+
+@app.get("/status")
+async def status():
+    """Detailed status endpoint."""
+    return {
+        "status": "ok",
+        "pipeline_ready": pipeline is not None,
+        "startup_error": startup_error,
+    }
 
 
 @app.post("/check", response_model=CheckResponse)
