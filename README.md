@@ -2,17 +2,17 @@
 
 > Stay focused at work without missing what matters.
 
-ProjectX monitors your Gmail inbox, uses AI agents to detect urgent messages, and forwards alerts via SMS to your basic keypad phone. Perfect for developers and students who want to minimize smartphone distractions during work hours.
+ProjectX monitors your Gmail inbox and Telegram messages, uses AI agents to detect urgent messages, and forwards alerts via SMS to your basic keypad phone. Perfect for developers and students who want to minimize smartphone distractions during work hours.
 
 ## 🎯 The Problem
 
-You want to focus during work hours. Smartphones are distracting. But you can't miss urgent emails from college, work, or family.
+You want to focus during work hours. Smartphones are distracting. But you can't miss urgent emails or messages from college, work, or family.
 
 ## 💡 The Solution
 
 A smart notification bridge that:
-1. **Monitors** your Gmail inbox in real-time
-2. **Evaluates** each email using AI agents
+1. **Monitors** your Gmail inbox and Telegram messages in real-time
+2. **Evaluates** each message using AI agents
 3. **Alerts** you via SMS when something is truly urgent
 4. **Gives you control** via CLI and web dashboard
 
@@ -24,16 +24,17 @@ A smart notification bridge that:
 │    Agent     │    │    Agent     │    │   Agent    │
 └──────────────┘    └──────────────┘    └────────────┘
       │                    │                   │
-  Gmail API          LLM (GPT-4o)          Twilio
+Gmail/Telegram       LLM (GPT-4o)          Twilio
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.11 or 3.12 (NOT 3.13 - CrewAI compatibility)
 - Gmail account
+- Telegram account (for Telegram monitoring)
 - Twilio account
-- OpenAI API key
+- OpenRouter/OpenAI API key
 
 ### Installation
 
@@ -44,7 +45,7 @@ cd projectx
 
 # Create virtual environment
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate
 
 # Install dependencies
 pip install -e ".[dev]"
@@ -54,54 +55,61 @@ cp .env.example .env
 # Edit .env with your API keys
 ```
 
-### Configuration
+### Telegram Setup
 
-1. Set up Gmail OAuth credentials in Google Cloud Console
-2. Get Twilio credentials from Twilio Console
-3. Get OpenAI API key from OpenAI Platform
-4. Update `.env` with all credentials
+1. Go to https://my.telegram.org/apps and create an app
+2. Note your `api_id` and `api_hash`
+3. Generate a session string:
+   ```bash
+   python scripts/generate_telegram_session.py
+   ```
+4. Add credentials to `.env`:
+   ```
+   TELEGRAM_API_ID=your-api-id
+   TELEGRAM_API_HASH=your-api-hash
+   TELEGRAM_SESSION=your-session-string
+   ```
 
 ### Running
 
 ```bash
-# Start the web server
+# Start the server (includes Telegram monitoring)
 uvicorn src.main:app --reload
 
 # Or use the CLI
 projectx status
-projectx start
-projectx pause
+projectx check
+projectx test
 ```
 
 ## 📱 CLI Commands
 
 ```bash
-projectx status      # Check monitoring status
-projectx start       # Start email monitoring
-projectx pause       # Pause monitoring
-projectx resume      # Resume monitoring
-projectx history     # View alert history
-projectx add-vip     # Add VIP sender
-projectx test        # Send test SMS
+projectx status      # Check server and pipeline status
+projectx check       # Trigger email check
+projectx test        # Send test urgent SMS
+projectx config show # Show configuration
 ```
 
 ## 🌐 Web Dashboard
 
 Access at `http://localhost:8000` to:
-- Connect your Gmail account
-- Configure urgency rules
-- Manage VIP sender list
-- View alert history
+- View dashboard with stats
+- See alert history (email + Telegram)
+- Manage VIP senders
+- Configure keyword rules
 
 ## 🛠️ Tech Stack
 
-- **AI Agents**: CrewAI
-- **LLM**: OpenAI GPT-4o-mini
+- **AI Agents**: CrewAI (with fallback)
+- **LLM**: OpenAI GPT-4o-mini via OpenRouter
 - **Backend**: FastAPI
 - **CLI**: Typer
 - **Database**: PostgreSQL
 - **SMS**: Twilio
 - **Email**: Gmail API
+- **Telegram**: Telethon (MTProto API)
+- **Deployment**: Railway
 
 ## 📝 Development
 
@@ -112,17 +120,16 @@ pytest
 # Format code
 black src/ cli/ tests/
 isort src/ cli/ tests/
-
-# Type checking
-mypy src/ cli/
-
-# Linting
-ruff check src/ cli/ tests/
 ```
 
 ## 🚢 Deployment
 
-Deployed on Railway. See `railway.toml` for configuration.
+Deployed on Railway. Required environment variables:
+- `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
+- `ALERT_PHONE_NUMBER`
+- `DATABASE_URL`
+- `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_SESSION`
 
 ## 📄 License
 

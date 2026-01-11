@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     # Telegram Bot
     telegram_bot_token: str = ""
     telegram_webhook_secret: str = ""  # Optional secret for webhook verification
+    
+    # Telegram Userbot (MTProto API for monitoring personal messages)
+    telegram_api_id: int = 0
+    telegram_api_hash: str = ""
+    telegram_session: str = ""  # Session string from first-time auth
+    telegram_phone: str = ""  # Phone number for auth
 
     # Database
     database_url: str = ""  # PostgreSQL connection string

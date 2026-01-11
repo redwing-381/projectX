@@ -692,3 +692,80 @@ curl -X POST -d "email=test@example.com" .../vip-senders/add
 **Live URL:** https://projectx-production-0eeb.up.railway.app/
 
 ---
+
+
+## Telegram Userbot Integration - January 11, 2026
+
+### Task: Monitor Personal Telegram Messages
+
+**Goal:** Monitor ALL incoming Telegram messages (not just bot messages) and classify them for urgency, sending SMS for urgent ones.
+
+### Why Userbot Instead of Bot?
+
+The initial Telegram bot implementation required users to forward messages to a bot. This was inconvenient - the user wanted automatic monitoring of their personal messages without any manual forwarding.
+
+**Solution:** Use Telethon (MTProto API) to create a "userbot" that logs in as the user and monitors all incoming messages automatically.
+
+### Implementation
+
+**Files Created:**
+- `src/services/telegram_userbot.py` - TelegramUserbot class using Telethon
+- `scripts/generate_telegram_session.py` - Script to generate session string
+
+**Files Modified:**
+- `src/config.py` - Added telegram_api_id, telegram_api_hash, telegram_session
+- `src/main.py` - Integrated userbot into FastAPI lifespan, runs alongside server
+- `pyproject.toml` - Added telethon>=1.34.0 dependency
+- `.env.example` - Cleaned up, added Telegram userbot variables
+
+### How It Works
+
+1. **Session Generation (one-time):**
+   ```bash
+   python scripts/generate_telegram_session.py
+   # Enter API ID, API hash, phone number
+   # Receive code on Telegram, enter it
+   # Get session string to save in .env
+   ```
+
+2. **Automatic Monitoring:**
+   - On server startup, userbot connects using session string
+   - Listens for all incoming messages via `events.NewMessage(incoming=True)`
+   - Skips messages from self
+   - Classifies each message using TelegramProcessingCrew
+   - Sends SMS via Twilio if classified as URGENT
+   - Saves to database with source="telegram"
+
+### Key Technical Details
+
+- Uses `StringSession` for persistent login without storing files
+- Runs `run_until_disconnected()` in background asyncio task
+- Properly handles shutdown in FastAPI lifespan
+- Falls back to keyword-based classification if LLM fails
+
+### Test Results
+
+```
+Telegram userbot started successfully
+Logged in as: Red (@redwing1134)
+Telegram userbot started - monitoring all incoming messages
+```
+
+### Railway Environment Variables Required
+
+```
+TELEGRAM_API_ID=your-api-id
+TELEGRAM_API_HASH=your-api-hash
+TELEGRAM_SESSION=your-session-string
+```
+
+### Status
+
+- ✅ Userbot connects and authenticates
+- ✅ Monitors all incoming messages
+- ✅ Classifies messages for urgency
+- ✅ Sends SMS for urgent messages
+- ✅ Saves to database with source tracking
+- ✅ Runs alongside FastAPI server
+
+---
