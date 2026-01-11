@@ -70,3 +70,37 @@ def init_db():
     
     from src.db.models import Base
     Base.metadata.create_all(bind=engine)
+    
+    # Run migrations for new columns
+    _run_migrations()
+
+
+def _run_migrations():
+    """Run database migrations for new columns."""
+    if engine is None:
+        return
+    
+    from sqlalchemy import text
+    
+    migrations = [
+        # Add source column to alert_history if it doesn't exist
+        """
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_name = 'alert_history' AND column_name = 'source'
+            ) THEN 
+                ALTER TABLE alert_history ADD COLUMN source VARCHAR(20) DEFAULT 'email';
+            END IF;
+        END $$;
+        """,
+    ]
+    
+    with engine.connect() as conn:
+        for migration in migrations:
+            try:
+                conn.execute(text(migration))
+                conn.commit()
+            except Exception as e:
+                print(f"Migration warning: {e}")
