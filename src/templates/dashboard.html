@@ -7,15 +7,22 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
         <h1 class="text-3xl font-bold">Dashboard</h1>
-        <form action="/check" method="post" class="inline">
+        <form action="/web/check" method="post" class="inline">
             <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium transition-colors">
                 🔄 Check Emails Now
             </button>
         </form>
     </div>
 
+    <!-- Check Result Message -->
+    {% if check_result %}
+    <div class="bg-{% if check_result.success %}green{% else %}red{% endif %}-900 border border-{% if check_result.success %}green{% else %}red{% endif %}-700 rounded-xl p-4">
+        <p class="font-medium">{{ check_result.message }}</p>
+    </div>
+    {% endif %}
+
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         <!-- Server Status -->
         <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
             <div class="flex items-center justify-between">
@@ -24,6 +31,18 @@
             </div>
             <p class="text-2xl font-bold mt-2 text-green-400">Online</p>
             <p class="text-gray-500 text-sm mt-1">Pipeline ready</p>
+        </div>
+
+        <!-- Telegram Status -->
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+                <h3 class="text-gray-400 text-sm font-medium">Telegram</h3>
+                <span class="text-{% if telegram_connected %}green{% else %}gray{% endif %}-400 text-2xl">📱</span>
+            </div>
+            <p class="text-2xl font-bold mt-2 text-{% if telegram_connected %}green{% else %}gray{% endif %}-400">
+                {% if telegram_connected %}Connected{% else %}Not Configured{% endif %}
+            </p>
+            <p class="text-gray-500 text-sm mt-1">{% if telegram_user %}@{{ telegram_user }}{% else %}Userbot{% endif %}</p>
         </div>
 
         <!-- Emails Checked Today -->
@@ -40,7 +59,7 @@
         <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
             <div class="flex items-center justify-between">
                 <h3 class="text-gray-400 text-sm font-medium">Alerts Sent Today</h3>
-                <span class="text-red-400 text-2xl">📱</span>
+                <span class="text-red-400 text-2xl">🔔</span>
             </div>
             <p class="text-2xl font-bold mt-2">{{ stats.alerts_sent }}</p>
             <p class="text-gray-500 text-sm mt-1">SMS notifications</p>
@@ -58,6 +77,7 @@
                 <table class="w-full">
                     <thead>
                         <tr class="text-left text-gray-400 text-sm">
+                            <th class="pb-3">Source</th>
                             <th class="pb-3">Sender</th>
                             <th class="pb-3">Subject</th>
                             <th class="pb-3">Status</th>
@@ -68,6 +88,13 @@
                     <tbody class="divide-y divide-gray-700">
                         {% for alert in recent_alerts %}
                         <tr>
+                            <td class="py-3">
+                                {% if alert.source == 'telegram' %}
+                                <span class="px-2 py-1 bg-blue-900 text-blue-300 rounded text-xs font-medium">TG</span>
+                                {% else %}
+                                <span class="px-2 py-1 bg-gray-700 text-gray-300 rounded text-xs font-medium">📧</span>
+                                {% endif %}
+                            </td>
                             <td class="py-3 text-sm">{{ alert.sender[:30] }}{% if alert.sender|length > 30 %}...{% endif %}</td>
                             <td class="py-3 text-sm">{{ alert.subject[:40] }}{% if alert.subject|length > 40 %}...{% endif %}</td>
                             <td class="py-3">

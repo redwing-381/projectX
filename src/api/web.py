@@ -57,11 +57,76 @@ async def dashboard(request: Request):
         except Exception as e:
             logger.warning(f"Could not fetch stats: {e}")
     
+    # Check Telegram status
+    telegram_connected = bool(settings.telegram_api_id and settings.telegram_session)
+    telegram_user = None
+    
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "active_page": "dashboard",
         "stats": stats,
         "recent_alerts": recent_alerts,
+        "telegram_connected": telegram_connected,
+        "telegram_user": telegram_user,
+        "check_result": None,
+    })
+
+
+@router.post("/web/check", response_class=HTMLResponse)
+async def web_check_emails(request: Request):
+    """Check emails and return to dashboard with results."""
+    settings = get_settings()
+    check_result = None
+    check_data = None
+    
+    # Run the check
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.post("http://localhost:8000/check", timeout=60.0)
+            if response.status_code == 200:
+                data = response.json()
+                check_data = data.get('data', {})
+                check_result = {
+                    "success": True,
+                    "message": f"✅ Checked {check_data.get('emails_checked', 0)} emails, sent {check_data.get('alerts_sent', 0)} alerts"
+                }
+            else:
+                check_result = {"success": False, "message": f"❌ Error: {response.text}"}
+    except Exception as e:
+        check_result = {"success": False, "message": f"❌ Error: {str(e)}"}
+    
+    # Get stats from database or use check results
+    stats = {"emails_checked": 0, "alerts_sent": 0}
+    recent_alerts = []
+    
+    if engine is not None:
+        try:
+            from src.db.database import SessionLocal
+            db = SessionLocal()
+            try:
+                stats = crud.get_today_stats(db)
+                recent_alerts = crud.get_recent_alerts(db, limit=5)
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning(f"Could not fetch stats: {e}")
+    
+    # If no DB stats but we have check data, use that
+    if stats["emails_checked"] == 0 and check_data:
+        stats["emails_checked"] = check_data.get('emails_checked', 0)
+        stats["alerts_sent"] = check_data.get('alerts_sent', 0)
+    
+    telegram_connected = bool(settings.telegram_api_id and settings.telegram_session)
+    
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request,
+        "active_page": "dashboard",
+        "stats": stats,
+        "recent_alerts": recent_alerts,
+        "telegram_connected": telegram_connected,
+        "telegram_user": None,
+        "check_result": check_result,
     })
 
 
@@ -250,6 +315,7 @@ async def settings_page(request: Request):
     vip_count = 0
     keyword_count = 0
     db_connected = is_db_connected()
+    telegram_connected = bool(settings.telegram_api_id and settings.telegram_session)
     
     if engine is not None:
         try:
@@ -269,6 +335,7 @@ async def settings_page(request: Request):
         "phone_masked": phone_masked,
         "monitoring_active": not settings.monitoring_paused,
         "db_connected": db_connected,
+        "telegram_connected": telegram_connected,
         "vip_count": vip_count,
         "keyword_count": keyword_count,
     })

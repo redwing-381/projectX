@@ -33,13 +33,18 @@ def save_alert_to_db(email: Email, classification, sms_sent: bool) -> None:
                 logger.debug(f"Alert already exists for email {email.id}")
                 return
             
+            # Handle both enum and string urgency values
+            urgency_value = classification.urgency
+            if hasattr(urgency_value, 'value'):
+                urgency_value = urgency_value.value
+            
             crud.create_alert(
                 db=db,
                 email_id=email.id,
                 sender=email.sender,
                 subject=email.subject,
                 snippet=email.snippet,
-                urgency=classification.urgency.value,
+                urgency=urgency_value,
                 reason=classification.reason,
                 sms_sent=sms_sent,
             )
@@ -129,14 +134,20 @@ class Pipeline:
         else:
             logger.debug("Using direct classifier for classification")
             classification = await self.classifier.classify(email)
+        
+        # Handle both enum and string urgency values
+        urgency_value = classification.urgency
+        if hasattr(urgency_value, 'value'):
+            urgency_value = urgency_value.value
             
         logger.info(
-            f"Classification: {classification.urgency.value} - {classification.reason}"
+            f"Classification: {urgency_value} - {classification.reason}"
         )
 
         # Send SMS if urgent
         sms_sent = False
-        if classification.urgency == Urgency.URGENT:
+        is_urgent = urgency_value == "URGENT" or urgency_value == Urgency.URGENT
+        if is_urgent:
             logger.info("Email is URGENT - sending SMS alert")
             sms_sent = self.twilio.send_alert(email, self.alert_phone)
 
@@ -149,12 +160,15 @@ class Pipeline:
 
         # Save to database
         save_alert_to_db(email, classification, sms_sent)
+        
+        # Convert urgency to enum for AlertResult
+        urgency_enum = Urgency.URGENT if urgency_value == "URGENT" else Urgency.NOT_URGENT
 
         return AlertResult(
             email_id=email.id,
             sender=email.sender,
             subject=email.subject,
-            urgency=classification.urgency,
+            urgency=urgency_enum,
             reason=classification.reason,
             sms_sent=sms_sent,
         )

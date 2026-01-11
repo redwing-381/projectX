@@ -769,3 +769,28 @@ TELEGRAM_SESSION=your-session-string
 - ✅ Runs alongside FastAPI server
 
 ---
+
+
+## UI Updates - January 11, 2026
+
+### Dashboard Improvements
+
+**Changes:**
+- Added Telegram status card showing connection status
+- Added source column to recent alerts table (TG badge for Telegram, 📧 for email)
+- Fixed "Check Emails" button to show results in UI instead of raw JSON
+- Added success/error message banner after email check
+
+**Settings Page Updates:**
+- Added Telegram Monitoring section showing userbot status
+- Added Telegram to System Information grid
+- Updated Quick Actions to use proper web routes
+
+**Bug Fixes:**
+- Fixed `'str' object has no attribute 'value'` error in pipeline
+- Updated pipeline to handle both enum and string urgency values
+- Fixed save_alert_to_db to handle string urgency
+
+**Note:** Stats only persist when DATABASE_URL is configured (works on Railway with PostgreSQL).
+
+---

@@ -18,9 +18,28 @@
         </div>
     </div>
 
+    <!-- Telegram Status -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-lg font-semibold mb-4">Telegram Monitoring</h2>
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-gray-400">Telegram userbot status:</p>
+                <p class="text-2xl font-bold mt-2 {% if telegram_connected %}text-green-400{% else %}text-gray-400{% endif %}">
+                    {% if telegram_connected %}Connected{% else %}Not Configured{% endif %}
+                </p>
+                {% if telegram_connected %}
+                <p class="text-gray-500 text-sm mt-1">Monitoring all incoming messages</p>
+                {% else %}
+                <p class="text-gray-500 text-sm mt-1">Set TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_SESSION in .env</p>
+                {% endif %}
+            </div>
+            <span class="text-4xl">{% if telegram_connected %}📱{% else %}📵{% endif %}</span>
+        </div>
+    </div>
+
     <!-- Monitoring Status -->
     <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 class="text-lg font-semibold mb-4">Monitoring Status</h2>
+        <h2 class="text-lg font-semibold mb-4">Email Monitoring Status</h2>
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-gray-400">Email monitoring is currently:</p>
@@ -46,7 +65,7 @@
     <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
         <h2 class="text-lg font-semibold mb-4">Quick Actions</h2>
         <div class="flex flex-wrap gap-4">
-            <form action="/check" method="post">
+            <form action="/web/check" method="post">
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium">
                     🔄 Check Emails Now
                 </button>
@@ -62,7 +81,7 @@
     <!-- System Info -->
     <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
         <h2 class="text-lg font-semibold mb-4">System Information</h2>
-        <div class="grid grid-cols-2 gap-4 text-sm">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
                 <p class="text-gray-400">Server Status</p>
                 <p class="font-medium text-green-400">Online</p>
@@ -71,6 +90,12 @@
                 <p class="text-gray-400">Database</p>
                 <p class="font-medium {% if db_connected %}text-green-400{% else %}text-red-400{% endif %}">
                     {% if db_connected %}Connected{% else %}Not Connected{% endif %}
+                </p>
+            </div>
+            <div>
+                <p class="text-gray-400">Telegram</p>
+                <p class="font-medium {% if telegram_connected %}text-green-400{% else %}text-gray-400{% endif %}">
+                    {% if telegram_connected %}Connected{% else %}Not Configured{% endif %}
                 </p>
             </div>
             <div>
