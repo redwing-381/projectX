@@ -7,14 +7,11 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files
-COPY pyproject.toml .
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -e .
-
-# Copy application code
+# Copy all files first (needed for pyproject.toml to find README.md)
 COPY . .
+
+# Install Python dependencies (non-editable for production)
+RUN pip install --no-cache-dir .
 
 # Expose port
 EXPOSE 8000
