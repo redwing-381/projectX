@@ -883,3 +883,63 @@ Web UI shows monitoring controls with enable/disable button and interval dropdow
 - Lists main commands, config commands, and monitor commands
 
 ---
+
+
+## January 12, 2026
+
+### Codebase Cleanup
+
+**Changes:**
+- Removed `.hypothesis/` cache directory (property test artifacts)
+- Removed `test_auth.py` (old test file in root)
+- `dynamous-kiro-hackathon-master/` already in `.gitignore`
+
+### API Key Authentication for CLI
+
+**Problem:** Anyone who knew the Railway URL could access the API endpoints and see personal emails/messages. This was a security concern for hackathon submission.
+
+**Solution:** Implemented API key authentication with login flow.
+
+**Server-side changes:**
+- Added `API_KEY` environment variable to `src/config.py`
+- Added auth middleware using FastAPI's `HTTPBearer` security
+- Protected endpoints: `/check`, `/test-urgent`, `/api/monitoring/*`
+- Public endpoints: `/health`, `/status` (for health checks and monitoring)
+
+**CLI-side changes:**
+- Added `projectx login` command - prompts for API key (hidden input like password)
+- Added `projectx logout` command - removes saved API key
+- API key stored in `~/.projectx/config.json`
+- All API calls include `Authorization: Bearer <key>` header
+- Increased timeout to 120s for long operations like email checks
+
+**Files Modified:**
+- `src/config.py` - Added `api_key` setting
+- `src/main.py` - Added `verify_api_key` dependency
+- `src/api/web.py` - Protected API endpoints
+- `cli/config.py` - Added `api_key` field and helper functions
+- `cli/client.py` - Added auth headers to requests
+- `cli/main.py` - Added `login` and `logout` commands
+- `.env.example` - Added `API_KEY` variable
+
+**Usage:**
+```bash
+# Generate API key
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# Add to Railway environment variables
+API_KEY=your-generated-key
+
+# On any machine
+pip install projectx-cli
+projectx login  # Enter API key (hidden)
+projectx check  # Now works with auth
+projectx logout # Remove saved key
+```
+
+**Security Model:**
+- Without API key: Can only access `/health` and `/status`
+- With API key: Full access to email checking and monitoring controls
+- Web dashboard still works (same server, no separate auth needed)
+
+---
