@@ -13,8 +13,8 @@ COPY . .
 # Install Python dependencies (non-editable for production)
 RUN pip install --no-cache-dir .
 
-# Expose port
+# Expose port (Railway uses $PORT)
 EXPOSE 8000
 
-# Run the application
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default command (Railway overrides this via railway.toml)
+CMD ["sh", "-c", "uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
