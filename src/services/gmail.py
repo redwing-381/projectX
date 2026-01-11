@@ -1,7 +1,9 @@
 """Gmail API integration service."""
 
 import base64
+import json
 import logging
+import os
 from pathlib import Path
 
 from google.auth.transport.requests import Request
@@ -41,8 +43,18 @@ class GmailService:
         """Authenticate with Gmail API using OAuth 2.0."""
         creds = None
 
-        # Load existing token if available
-        if self.token_path.exists():
+        # First, try to load token from environment variable (for Railway deployment)
+        token_json = os.environ.get("GMAIL_TOKEN_JSON")
+        if token_json:
+            logger.info("Loading Gmail token from environment variable")
+            try:
+                token_data = json.loads(token_json)
+                creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+            except Exception as e:
+                logger.error(f"Failed to load token from env: {e}")
+
+        # Fall back to token file
+        if not creds and self.token_path.exists():
             creds = Credentials.from_authorized_user_file(str(self.token_path), SCOPES)
 
         # Refresh or get new credentials
@@ -50,7 +62,16 @@ class GmailService:
             if creds and creds.expired and creds.refresh_token:
                 logger.info("Refreshing expired credentials")
                 creds.refresh(Request())
+                # Update env var if we refreshed (for Railway)
+                if token_json:
+                    logger.info("Token refreshed - update GMAIL_TOKEN_JSON env var")
             else:
+                # Only try OAuth flow if not in production (Railway)
+                if os.environ.get("RAILWAY_ENVIRONMENT"):
+                    raise RuntimeError(
+                        "Gmail token expired or missing. "
+                        "Re-authenticate locally and update GMAIL_TOKEN_JSON env var."
+                    )
                 if not self.credentials_path.exists():
                     raise FileNotFoundError(
                         f"Credentials file not found: {self.credentials_path}. "
@@ -62,10 +83,11 @@ class GmailService:
                 )
                 creds = flow.run_local_server(port=0)
 
-            # Save credentials for next run
-            with open(self.token_path, "w") as token:
-                token.write(creds.to_json())
-                logger.info(f"Saved credentials to {self.token_path}")
+            # Save credentials for next run (local only)
+            if not os.environ.get("RAILWAY_ENVIRONMENT"):
+                with open(self.token_path, "w") as token:
+                    token.write(creds.to_json())
+                    logger.info(f"Saved credentials to {self.token_path}")
 
         return creds
 
