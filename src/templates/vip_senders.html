@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}VIP Senders - ProjectX{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold">VIP Senders</h1>
+            <p class="text-gray-400 mt-1">Emails from VIP senders are automatically marked as URGENT</p>
+        </div>
+    </div>
+
+    <!-- Add Form -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-lg font-semibold mb-4">Add VIP Sender</h2>
+        <form action="/vip-senders/add" method="post" class="flex gap-4">
+            <input type="text" name="email" required
+                   placeholder="Email address or domain (e.g., boss@company.com or company.com)"
+                   class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2">
+            <button type="submit" class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-medium">
+                Add VIP
+            </button>
+        </form>
+    </div>
+
+    <!-- VIP List -->
+    <div class="bg-gray-800 rounded-xl border border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-700">
+            <h2 class="text-lg font-semibold">Current VIP Senders ({{ senders|length }})</h2>
+        </div>
+        <div class="p-6">
+            {% if senders %}
+            <div class="space-y-3">
+                {% for sender in senders %}
+                <div class="flex items-center justify-between bg-gray-750 rounded-lg p-4 border border-gray-700">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">⭐</span>
+                        <div>
+                            <p class="font-medium">{{ sender.email_or_domain }}</p>
+                            <p class="text-sm text-gray-400">Added {{ sender.created_at.strftime('%Y-%m-%d') }}</p>
+                        </div>
+                    </div>
+                    <form action="/vip-senders/delete/{{ sender.id }}" method="post" 
+                          onsubmit="return confirm('Remove this VIP sender?')">
+                        <button type="submit" class="text-red-400 hover:text-red-300 px-3 py-1 rounded hover:bg-red-900/30">
+                            Remove
+                        </button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-center py-8">No VIP senders configured. Add one above to get started.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Info -->
+    <div class="bg-blue-900/30 border border-blue-800 rounded-xl p-4">
+        <p class="text-blue-300 text-sm">
+            💡 <strong>Tip:</strong> You can add full email addresses (boss@company.com) or just domains (company.com). 
+            Domain rules will match any email from that domain.
+        </p>
+    </div>
+</div>
+{% endblock %}

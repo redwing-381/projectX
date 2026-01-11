@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - ProjectX{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <h1 class="text-3xl font-bold">Dashboard</h1>
+        <form action="/check" method="post" class="inline">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium transition-colors">
+                🔄 Check Emails Now
+            </button>
+        </form>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Server Status -->
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+                <h3 class="text-gray-400 text-sm font-medium">Server Status</h3>
+                <span class="text-green-400 text-2xl">✓</span>
+            </div>
+            <p class="text-2xl font-bold mt-2 text-green-400">Online</p>
+            <p class="text-gray-500 text-sm mt-1">Pipeline ready</p>
+        </div>
+
+        <!-- Emails Checked Today -->
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+                <h3 class="text-gray-400 text-sm font-medium">Emails Checked Today</h3>
+                <span class="text-blue-400 text-2xl">📧</span>
+            </div>
+            <p class="text-2xl font-bold mt-2">{{ stats.emails_checked }}</p>
+            <p class="text-gray-500 text-sm mt-1">Processed emails</p>
+        </div>
+
+        <!-- Alerts Sent Today -->
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+                <h3 class="text-gray-400 text-sm font-medium">Alerts Sent Today</h3>
+                <span class="text-red-400 text-2xl">📱</span>
+            </div>
+            <p class="text-2xl font-bold mt-2">{{ stats.alerts_sent }}</p>
+            <p class="text-gray-500 text-sm mt-1">SMS notifications</p>
+        </div>
+    </div>
+
+    <!-- Recent Alerts -->
+    <div class="bg-gray-800 rounded-xl border border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-700">
+            <h2 class="text-xl font-semibold">Recent Alerts</h2>
+        </div>
+        <div class="p-6">
+            {% if recent_alerts %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-400 text-sm">
+                            <th class="pb-3">Sender</th>
+                            <th class="pb-3">Subject</th>
+                            <th class="pb-3">Status</th>
+                            <th class="pb-3">SMS</th>
+                            <th class="pb-3">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        {% for alert in recent_alerts %}
+                        <tr>
+                            <td class="py-3 text-sm">{{ alert.sender[:30] }}{% if alert.sender|length > 30 %}...{% endif %}</td>
+                            <td class="py-3 text-sm">{{ alert.subject[:40] }}{% if alert.subject|length > 40 %}...{% endif %}</td>
+                            <td class="py-3">
+                                {% if alert.urgency == 'URGENT' %}
+                                <span class="px-2 py-1 bg-red-900 text-red-300 rounded text-xs font-medium">URGENT</span>
+                                {% else %}
+                                <span class="px-2 py-1 bg-gray-700 text-gray-300 rounded text-xs font-medium">Normal</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">
+                                {% if alert.sms_sent %}
+                                <span class="text-green-400">✓</span>
+                                {% else %}
+                                <span class="text-gray-500">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 text-sm text-gray-400">{{ alert.created_at.strftime('%H:%M') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-center py-8">No alerts yet. Run an email check to get started.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

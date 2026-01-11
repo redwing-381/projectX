@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - ProjectX{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <h1 class="text-3xl font-bold">Settings</h1>
+
+    <!-- Phone Number -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-lg font-semibold mb-4">Alert Phone Number</h2>
+        <p class="text-gray-400 mb-4">SMS alerts will be sent to this number when urgent emails are detected.</p>
+        <div class="flex items-center gap-4">
+            <div class="bg-gray-700 rounded-lg px-4 py-3 font-mono">
+                {{ phone_masked or 'Not configured' }}
+            </div>
+            <span class="text-gray-500 text-sm">(Configured via environment variable)</span>
+        </div>
+    </div>
+
+    <!-- Monitoring Status -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-lg font-semibold mb-4">Monitoring Status</h2>
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-gray-400">Email monitoring is currently:</p>
+                <p class="text-2xl font-bold mt-2 {% if monitoring_active %}text-green-400{% else %}text-yellow-400{% endif %}">
+                    {% if monitoring_active %}Active{% else %}Paused{% endif %}
+                </p>
+            </div>
+            <form action="/settings/toggle-monitoring" method="post">
+                {% if monitoring_active %}
+                <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 px-6 py-3 rounded-lg font-medium">
+                    ⏸️ Pause Monitoring
+                </button>
+                {% else %}
+                <button type="submit" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium">
+                    ▶️ Resume Monitoring
+                </button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-lg font-semibold mb-4">Quick Actions</h2>
+        <div class="flex flex-wrap gap-4">
+            <form action="/check" method="post">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium">
+                    🔄 Check Emails Now
+                </button>
+            </form>
+            <form action="/test-urgent" method="post">
+                <button type="submit" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-medium">
+                    🧪 Test SMS Alert
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- System Info -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-lg font-semibold mb-4">System Information</h2>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+                <p class="text-gray-400">Server Status</p>
+                <p class="font-medium text-green-400">Online</p>
+            </div>
+            <div>
+                <p class="text-gray-400">Database</p>
+                <p class="font-medium {% if db_connected %}text-green-400{% else %}text-red-400{% endif %}">
+                    {% if db_connected %}Connected{% else %}Not Connected{% endif %}
+                </p>
+            </div>
+            <div>
+                <p class="text-gray-400">VIP Senders</p>
+                <p class="font-medium">{{ vip_count }}</p>
+            </div>
+            <div>
+                <p class="text-gray-400">Keyword Rules</p>
+                <p class="font-medium">{{ keyword_count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

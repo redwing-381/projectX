@@ -19,7 +19,7 @@ Refactor ProjectX to use CrewAI for multi-agent orchestration with Monitor, Clas
     - `create_alert_agent()` - formats SMS messages
     - _Requirements: 2.1, 3.2, 4.2_
 
-  - [ ]* 2.2 Write property test for classification output validity
+  - [x]* 2.2 Write property test for classification output validity
     - **Property 2: Classification output validity**
     - **Validates: Requirements 3.3, 3.4**
 
@@ -30,7 +30,7 @@ Refactor ProjectX to use CrewAI for multi-agent orchestration with Monitor, Clas
     - `create_alert_task()` - SMS formatting task
     - _Requirements: 2.3, 3.2, 4.3_
 
-  - [ ]* 3.2 Write property test for SMS format validity
+  - [x]* 3.2 Write property test for SMS format validity
     - **Property 3: SMS format validity**
     - **Validates: Requirements 4.2, 4.3, 4.4**
 
@@ -42,11 +42,11 @@ Refactor ProjectX to use CrewAI for multi-agent orchestration with Monitor, Clas
     - `_parse_result()` to extract Classification from crew output
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [ ]* 4.2 Write property test for crew result schema conformance
+  - [x]* 4.2 Write property test for crew result schema conformance
     - **Property 4: Crew result schema conformance**
     - **Validates: Requirements 5.3**
 
-  - [ ]* 4.3 Write property test for error handling
+  - [x]* 4.3 Write property test for error handling
     - **Property 5: Error handling graceful degradation**
     - **Validates: Requirements 5.4**
 

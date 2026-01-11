@@ -33,9 +33,13 @@ class Settings(BaseSettings):
     # Alert destination (keypad phone)
     alert_phone_number: str = ""
 
+    # Database
+    database_url: str = ""  # PostgreSQL connection string
+
     # App settings
     debug: bool = False
     app_name: str = "ProjectX"
+    monitoring_paused: bool = False  # Pause email monitoring
 
     class Config:
         env_file = ".env"

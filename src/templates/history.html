@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Alert History - ProjectX{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <h1 class="text-3xl font-bold">Alert History</h1>
+
+    <!-- Filters -->
+    <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+        <form method="get" class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Filter by Status</label>
+                <select name="urgency" class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm">
+                    <option value="">All</option>
+                    <option value="URGENT" {% if urgency == 'URGENT' %}selected{% endif %}>Urgent Only</option>
+                    <option value="NOT_URGENT" {% if urgency == 'NOT_URGENT' %}selected{% endif %}>Normal Only</option>
+                </select>
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm text-gray-400 mb-1">Search</label>
+                <input type="text" name="search" value="{{ search or '' }}" 
+                       placeholder="Search sender or subject..."
+                       class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium">
+                Apply Filters
+            </button>
+            {% if urgency or search %}
+            <a href="/history" class="text-gray-400 hover:text-white px-4 py-2 text-sm">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Results -->
+    <div class="bg-gray-800 rounded-xl border border-gray-700">
+        <div class="p-6">
+            {% if alerts %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
+                            <th class="pb-3">Sender</th>
+                            <th class="pb-3">Subject</th>
+                            <th class="pb-3">Status</th>
+                            <th class="pb-3">Reason</th>
+                            <th class="pb-3">SMS</th>
+                            <th class="pb-3">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        {% for alert in alerts %}
+                        <tr class="hover:bg-gray-750">
+                            <td class="py-3 text-sm">{{ alert.sender[:25] }}{% if alert.sender|length > 25 %}...{% endif %}</td>
+                            <td class="py-3 text-sm">{{ alert.subject[:35] }}{% if alert.subject|length > 35 %}...{% endif %}</td>
+                            <td class="py-3">
+                                {% if alert.urgency == 'URGENT' %}
+                                <span class="px-2 py-1 bg-red-900 text-red-300 rounded text-xs font-medium">URGENT</span>
+                                {% else %}
+                                <span class="px-2 py-1 bg-gray-700 text-gray-300 rounded text-xs font-medium">Normal</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 text-sm text-gray-400">{{ alert.reason[:30] }}{% if alert.reason|length > 30 %}...{% endif %}</td>
+                            <td class="py-3">
+                                {% if alert.sms_sent %}
+                                <span class="text-green-400">✓ Sent</span>
+                                {% else %}
+                                <span class="text-gray-500">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 text-sm text-gray-400">{{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-700">
+                <p class="text-sm text-gray-400">
+                    Showing {{ (page - 1) * 20 + 1 }} - {{ (page - 1) * 20 + alerts|length }} of {{ total }} results
+                </p>
+                <div class="flex gap-2">
+                    {% if page > 1 %}
+                    <a href="?page={{ page - 1 }}{% if urgency %}&urgency={{ urgency }}{% endif %}{% if search %}&search={{ search }}{% endif %}" 
+                       class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 text-sm">Previous</a>
+                    {% endif %}
+                    {% if (page * 20) < total %}
+                    <a href="?page={{ page + 1 }}{% if urgency %}&urgency={{ urgency }}{% endif %}{% if search %}&search={{ search }}{% endif %}" 
+                       class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 text-sm">Next</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-center py-8">No alerts found.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

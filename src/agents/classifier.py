@@ -1,6 +1,7 @@
 """Email urgency classifier agent using LLM."""
 
 import logging
+from typing import Optional, Tuple
 from openai import OpenAI
 
 from src.models.schemas import Email, Classification, Urgency
@@ -34,6 +35,34 @@ Respond with ONLY a JSON object in this exact format:
 """
 
 
+def check_vip_and_keywords(email: Email) -> Tuple[bool, Optional[str]]:
+    """Check if email matches VIP sender or contains urgent keyword.
+    
+    Returns:
+        Tuple of (is_urgent, reason) if matched, (False, None) otherwise.
+    """
+    try:
+        from src.db.database import get_db_session
+        from src.db import crud
+        
+        with get_db_session() as db:
+            # Check VIP sender
+            is_vip, vip_match = crud.is_vip_sender(db, email.sender)
+            if is_vip:
+                return True, f"VIP sender: {vip_match}"
+            
+            # Check keywords in subject and snippet
+            text_to_check = f"{email.subject} {email.snippet}"
+            has_keyword, keyword_match = crud.has_urgent_keyword(db, text_to_check)
+            if has_keyword:
+                return True, f"Urgent keyword: {keyword_match}"
+        
+        return False, None
+    except Exception as e:
+        logger.debug(f"VIP/keyword check skipped (DB not configured): {e}")
+        return False, None
+
+
 class ClassifierAgent:
     """Agent that classifies email urgency using LLM (OpenRouter or OpenAI compatible)."""
 
@@ -65,6 +94,13 @@ class ClassifierAgent:
         Returns:
             Classification with urgency level and reason.
         """
+        # First check VIP senders and keywords (instant URGENT)
+        is_urgent, rule_reason = check_vip_and_keywords(email)
+        if is_urgent:
+            logger.info(f"Email marked URGENT by rule: {rule_reason}")
+            return Classification(urgency=Urgency.URGENT, reason=rule_reason)
+        
+        # Fall back to LLM classification
         try:
             prompt = CLASSIFICATION_PROMPT.format(
                 sender=email.sender,

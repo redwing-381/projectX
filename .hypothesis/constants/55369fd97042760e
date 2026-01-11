@@ -1,0 +1,4 @@
+# file: /Users/solaimuthua/Documents/GitHub/projectX/src/models/schemas.py
+# hypothesis_version: 6.150.0
+
+['Email subject line', 'Gmail message ID', 'NOT_URGENT', 'ProjectX', 'URGENT', 'Urgency level', 'ok']

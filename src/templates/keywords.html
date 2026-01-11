@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Keyword Rules - ProjectX{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold">Keyword Rules</h1>
+            <p class="text-gray-400 mt-1">Emails containing these keywords are automatically marked as URGENT</p>
+        </div>
+    </div>
+
+    <!-- Add Form -->
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 class="text-lg font-semibold mb-4">Add Keyword</h2>
+        <form action="/keywords/add" method="post" class="flex gap-4">
+            <input type="text" name="keyword" required
+                   placeholder="Enter keyword (e.g., urgent, deadline, emergency)"
+                   class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2">
+            <button type="submit" class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-medium">
+                Add Keyword
+            </button>
+        </form>
+    </div>
+
+    <!-- Keywords List -->
+    <div class="bg-gray-800 rounded-xl border border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-700">
+            <h2 class="text-lg font-semibold">Current Keywords ({{ keywords|length }})</h2>
+        </div>
+        <div class="p-6">
+            {% if keywords %}
+            <div class="flex flex-wrap gap-3">
+                {% for kw in keywords %}
+                <div class="flex items-center gap-2 bg-gray-750 rounded-lg px-4 py-2 border border-gray-700">
+                    <span class="font-medium">{{ kw.keyword }}</span>
+                    <form action="/keywords/delete/{{ kw.id }}" method="post" class="inline"
+                          onsubmit="return confirm('Remove this keyword?')">
+                        <button type="submit" class="text-red-400 hover:text-red-300 ml-2">×</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-center py-8">No keywords configured. Add one above to get started.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Info -->
+    <div class="bg-blue-900/30 border border-blue-800 rounded-xl p-4">
+        <p class="text-blue-300 text-sm">
+            💡 <strong>Tip:</strong> Keywords are case-insensitive and will match anywhere in the email subject or preview. 
+            Common examples: "urgent", "asap", "deadline", "emergency", "important".
+        </p>
+    </div>
+</div>
+{% endblock %}

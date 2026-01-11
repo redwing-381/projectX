@@ -20,6 +20,34 @@ logger = logging.getLogger(__name__)
 ClassifierType = Union[ClassifierAgent, EmailProcessingCrew]
 
 
+def save_alert_to_db(email: Email, classification, sms_sent: bool) -> None:
+    """Save alert result to database."""
+    try:
+        from src.db.database import get_db_session
+        from src.db import crud
+        
+        with get_db_session() as db:
+            # Check if already exists
+            existing = crud.get_alert_by_email_id(db, email.id)
+            if existing:
+                logger.debug(f"Alert already exists for email {email.id}")
+                return
+            
+            crud.create_alert(
+                db=db,
+                email_id=email.id,
+                sender=email.sender,
+                subject=email.subject,
+                snippet=email.snippet,
+                urgency=classification.urgency.value,
+                reason=classification.reason,
+                sms_sent=sms_sent,
+            )
+            logger.debug(f"Saved alert to database: {email.id}")
+    except Exception as e:
+        logger.debug(f"Could not save to database (DB not configured): {e}")
+
+
 class Pipeline:
     """Orchestrates the email check → classify → alert pipeline."""
 
@@ -119,6 +147,25 @@ class Pipeline:
         else:
             logger.info("Email is not urgent - no alert needed")
 
+        # Save to database
+        save_alert_to_db(email, classification, sms_sent)
+
+        return AlertResult(
+            email_id=email.id,
+            sender=email.sender,
+            subject=email.subject,
+            urgency=classification.urgency,
+            reason=classification.reason,
+            sms_sent=sms_sent,
+        )
+
+    async def _save_and_return(
+        self, email: Email, classification, sms_sent: bool
+    ) -> AlertResult:
+        """Save to database and return AlertResult."""
+        # Save to database
+        save_alert_to_db(email, classification, sms_sent)
+        
         return AlertResult(
             email_id=email.id,
             sender=email.sender,

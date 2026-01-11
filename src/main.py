@@ -5,9 +5,11 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from src.config import get_settings
+from src.api.web import router as web_router
 from src.models.schemas import HealthResponse, CheckResponse, PipelineResult
 
 # Configure logging
@@ -31,6 +33,14 @@ async def lifespan(app: FastAPI):
         settings = get_settings()
         logger.info(f"Starting {settings.app_name}...")
         logger.info(f"Environment: {'Railway' if os.environ.get('RAILWAY_ENVIRONMENT') else 'Local'}")
+
+        # Initialize database tables
+        try:
+            from src.db.database import init_db
+            init_db()
+            logger.info("Database tables initialized")
+        except Exception as db_error:
+            logger.warning(f"Database initialization skipped: {db_error}")
 
         # Import services here to catch import errors
         from src.services.gmail import GmailService
@@ -98,6 +108,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# Include web dashboard routes
+app.include_router(web_router)
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -222,9 +235,9 @@ async def test_urgent():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/")
-async def root():
-    """Root endpoint with basic info."""
+@app.get("/api")
+async def api_info():
+    """API info endpoint."""
     return {
         "app": "ProjectX",
         "description": "Smart notification bridge",

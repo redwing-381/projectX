@@ -470,3 +470,157 @@ source .venv/bin/activate && uvicorn src.main:app --reload
 4. **Test locally before deploying** to catch compatibility issues early
 
 ---
+
+
+---
+
+## Property-Based Tests - January 11, 2026
+
+### Task: Complete Optional Property Tests for CrewAI Agents
+
+**Goal:** Implement property-based tests using Hypothesis to validate correctness properties from the design document.
+
+### Tests Implemented
+
+**File:** `tests/test_agents_properties.py`
+
+#### Property 2: Classification Output Validity
+- Tests that urgency is exactly URGENT or NOT_URGENT
+- Tests that reason is always a non-empty string
+- Tests construction from valid inputs
+- Tests rejection of invalid urgency values
+- Tests rejection of empty reasons
+
+#### Property 3: SMS Format Validity
+- Tests SMS length ≤ 160 characters for any email
+- Tests SMS contains sender information
+- Tests SMS contains subject (possibly truncated)
+- Tests handling of very long subjects
+
+#### Property 4: Crew Result Schema Conformance
+- Tests PipelineResult construction with valid data
+- Tests JSON serialization works correctly
+- Tests AlertResult has all required fields
+
+#### Property 5: Error Handling Graceful Degradation
+- Tests failures return valid Classification (not exceptions)
+- Tests failure reason is bounded in length
+- Tests specific failure scenarios (JSON parse, timeout, rate limit)
+
+### Test Results
+
+```
+17 passed in 1.94s
+```
+
+All property tests pass with 100 iterations each (Hypothesis default).
+
+### Dependencies Added
+
+- `hypothesis>=6.150.0` - Property-based testing framework
+
+### CrewAI Agents Spec Status
+
+All tasks complete:
+- ✅ Task 1: Add CrewAI dependency and configuration
+- ✅ Task 2: Create agent definitions + property tests
+- ✅ Task 3: Create task definitions + property tests
+- ✅ Task 4: Create crew orchestration + property tests
+- ✅ Task 5: Update pipeline to use CrewAI
+- ✅ Task 6: Update main.py initialization
+- ✅ Task 7: Checkpoint - local verification
+- ✅ Task 8: Deploy and verify
+
+**CrewAI Agents spec is now 100% complete!**
+
+---
+
+
+## CLI Tool Implementation - January 11, 2026
+
+### Task: Build Typer CLI for ProjectX
+
+**Goal:** Create a command-line interface that acts as an API client for the deployed server.
+
+### Files Created
+
+- `cli/config.py` - Configuration management (server URL, config file)
+- `cli/client.py` - HTTP client for API calls (health, status, check, test)
+- `cli/main.py` - Typer CLI app with commands
+
+### Commands Implemented
+
+| Command | Description |
+|---------|-------------|
+| `projectx status` | Check server health and pipeline status |
+| `projectx check` | Trigger email check, display results |
+| `projectx test` | Test classification with sample urgent email |
+| `projectx config show` | Display current configuration |
+| `projectx config set-url <url>` | Set server URL |
+
+All commands support `--json` flag for machine-readable output.
+
+### Features
+
+- **Rich output**: Colored text, tables, spinners
+- **Error handling**: Graceful connection/API error messages
+- **Configuration**: Persisted in `~/.projectx/config.json`
+- **Default URL**: Points to Railway deployment
+
+### Test Results
+
+```bash
+$ projectx status
+Server: https://projectx-production-0eeb.up.railway.app
+✓ Server is running
+  App: ProjectX
+  Pipeline ready: True
+
+$ projectx test
+Test Email:
+  From: Boss <boss@company.com>
+  Subject: URGENT: Server is down - need immediate help!
+
+Classification: URGENT
+  Reason: The email indicates a server crash...
+
+✓ SMS sent to your phone
+```
+
+### CLI Tool Status
+
+Core implementation complete:
+- ✅ Configuration module
+- ✅ API client
+- ✅ All CLI commands (status, check, test, config)
+- ✅ Error handling
+- ✅ Entry point configured (`projectx` command)
+
+Optional property tests remaining (can be added later).
+
+---
+
+
+## CLI Published to PyPI - January 11, 2026
+
+### Package Published! 🎉
+
+**PyPI URL:** https://pypi.org/project/projectx-cli/0.1.0/
+
+**Install anywhere:**
+```bash
+pip install projectx-cli
+projectx status
+projectx check
+projectx test
+```
+
+**Package details:**
+- Name: `projectx-cli`
+- Version: 0.1.0
+- Dependencies: typer, rich, httpx, pydantic
+- Python: 3.9+
+
+Now the CLI can be used from any machine without the codebase - just install and run!
+
+---
