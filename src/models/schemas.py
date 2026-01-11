@@ -1,6 +1,8 @@
 """Pydantic models for ProjectX."""
 
+from datetime import datetime
 from enum import Enum
+from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -20,11 +22,25 @@ class Email(BaseModel):
     snippet: str = Field(..., description="Email body snippet/preview")
 
 
+class TelegramMessage(BaseModel):
+    """Telegram message data."""
+
+    id: str = Field(..., description="Telegram message ID")
+    sender: str = Field(..., description="Sender name")
+    sender_username: Optional[str] = Field(None, description="Sender @username if available")
+    text: str = Field(..., description="Message text content")
+    timestamp: datetime = Field(..., description="When message was sent")
+    is_forwarded: bool = Field(False, description="Whether this was forwarded")
+    original_sender: Optional[str] = Field(None, description="Original sender if forwarded")
+    chat_id: str = Field(..., description="Chat ID for replies")
+
+
 class Classification(BaseModel):
     """AI classification result."""
 
-    urgency: Urgency = Field(..., description="Urgency level")
+    urgency: str = Field(..., description="Urgency level: URGENT or NOT_URGENT")
     reason: str = Field(..., min_length=1, description="One-line reason for classification")
+    sms_message: Optional[str] = Field(None, description="SMS message if urgent")
 
 
 class AlertResult(BaseModel):

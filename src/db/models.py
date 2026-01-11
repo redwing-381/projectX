@@ -9,7 +9,7 @@ Base = declarative_base()
 
 
 class AlertHistory(Base):
-    """Record of processed emails and their classifications."""
+    """Record of processed emails/messages and their classifications."""
     
     __tablename__ = "alert_history"
     
@@ -21,10 +21,11 @@ class AlertHistory(Base):
     urgency = Column(String(20))  # URGENT or NOT_URGENT
     reason = Column(Text)
     sms_sent = Column(Boolean, default=False)
+    source = Column(String(20), default="email")  # email or telegram
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     
     def __repr__(self):
-        return f"<AlertHistory {self.email_id}: {self.urgency}>"
+        return f"<AlertHistory {self.email_id}: {self.urgency} ({self.source})>"
 
 
 class VIPSender(Base):

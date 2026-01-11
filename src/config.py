@@ -33,8 +33,15 @@ class Settings(BaseSettings):
     # Alert destination (keypad phone)
     alert_phone_number: str = ""
 
+    # Telegram Bot
+    telegram_bot_token: str = ""
+    telegram_webhook_secret: str = ""  # Optional secret for webhook verification
+
     # Database
     database_url: str = ""  # PostgreSQL connection string
+
+    # Railway
+    railway_public_url: str = ""  # Railway public URL for webhooks
 
     # App settings
     debug: bool = False

@@ -40,6 +40,7 @@
                 <table class="w-full">
                     <thead>
                         <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
+                            <th class="pb-3">Source</th>
                             <th class="pb-3">Sender</th>
                             <th class="pb-3">Subject</th>
                             <th class="pb-3">Status</th>
@@ -51,6 +52,13 @@
                     <tbody class="divide-y divide-gray-700">
                         {% for alert in alerts %}
                         <tr class="hover:bg-gray-750">
+                            <td class="py-3">
+                                {% if alert.source == 'telegram' %}
+                                <span class="px-2 py-1 bg-blue-900 text-blue-300 rounded text-xs font-medium">TG</span>
+                                {% else %}
+                                <span class="px-2 py-1 bg-gray-700 text-gray-300 rounded text-xs font-medium">Email</span>
+                                {% endif %}
+                            </td>
                             <td class="py-3 text-sm">{{ alert.sender[:25] }}{% if alert.sender|length > 25 %}...{% endif %}</td>
                             <td class="py-3 text-sm">{{ alert.subject[:35] }}{% if alert.subject|length > 35 %}...{% endif %}</td>
                             <td class="py-3">

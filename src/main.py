@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from src.config import get_settings
 from src.api.web import router as web_router
+from src.api.telegram import router as telegram_router
 from src.models.schemas import HealthResponse, CheckResponse, PipelineResult
 
 # Configure logging
@@ -110,6 +111,9 @@ app = FastAPI(
 
 # Include web dashboard routes
 app.include_router(web_router)
+
+# Include Telegram webhook routes
+app.include_router(telegram_router)
 
 
 @app.get("/health", response_model=HealthResponse)

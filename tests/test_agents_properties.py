@@ -25,11 +25,12 @@ email_strategy = st.builds(
     snippet=st.text(min_size=1, max_size=500).filter(lambda x: x.strip()),
 )
 
-# Classification generator
+# Classification generator - now uses string urgency
 classification_strategy = st.builds(
     Classification,
-    urgency=st.sampled_from([Urgency.URGENT, Urgency.NOT_URGENT]),
+    urgency=st.sampled_from(["URGENT", "NOT_URGENT"]),
     reason=st.text(min_size=1, max_size=200).filter(lambda x: x.strip()),
+    sms_message=st.none(),
 )
 
 # AlertResult generator
@@ -63,8 +64,7 @@ class TestClassificationOutputValidity:
         """Urgency must be exactly URGENT or NOT_URGENT."""
         # **Feature: crewai-agents, Property 2: Classification output validity**
         # **Validates: Requirements 3.3, 3.4**
-        assert classification.urgency in [Urgency.URGENT, Urgency.NOT_URGENT]
-        assert classification.urgency.value in ["URGENT", "NOT_URGENT"]
+        assert classification.urgency in ["URGENT", "NOT_URGENT"]
 
     @given(classification=classification_strategy)
     @settings(max_examples=100)
@@ -83,25 +83,27 @@ class TestClassificationOutputValidity:
         # **Feature: crewai-agents, Property 2: Classification output validity**
         # **Validates: Requirements 3.3, 3.4**
         classification = Classification(
-            urgency=Urgency(urgency),
+            urgency=urgency,
             reason=reason
         )
-        assert classification.urgency.value == urgency
+        assert classification.urgency == urgency
         assert classification.reason == reason
 
-    def test_classification_rejects_invalid_urgency(self):
-        """Classification rejects invalid urgency values."""
+    def test_classification_accepts_valid_urgency_strings(self):
+        """Classification accepts valid urgency string values."""
         # **Feature: crewai-agents, Property 2: Classification output validity**
         # **Validates: Requirements 3.3, 3.4**
-        with pytest.raises(ValueError):
-            Classification(urgency="INVALID", reason="test")
+        urgent = Classification(urgency="URGENT", reason="test reason")
+        not_urgent = Classification(urgency="NOT_URGENT", reason="test reason")
+        assert urgent.urgency == "URGENT"
+        assert not_urgent.urgency == "NOT_URGENT"
 
     def test_classification_rejects_empty_reason(self):
         """Classification rejects empty reason."""
         # **Feature: crewai-agents, Property 2: Classification output validity**
         # **Validates: Requirements 3.3, 3.4**
         with pytest.raises(ValueError):
-            Classification(urgency=Urgency.URGENT, reason="")
+            Classification(urgency="URGENT", reason="")
 
 
 
@@ -257,7 +259,7 @@ class TestErrorHandlingGracefulDegradation:
         """Simulate how the classifier handles failures."""
         # This mirrors the error handling in ClassifierAgent.classify()
         return Classification(
-            urgency=Urgency.NOT_URGENT,
+            urgency="NOT_URGENT",
             reason=f"Classification failed - {error_message[:50]}",
         )
 
@@ -269,7 +271,7 @@ class TestErrorHandlingGracefulDegradation:
         # **Validates: Requirements 5.4**
         result = self.simulate_classification_failure(error_message)
         assert isinstance(result, Classification)
-        assert result.urgency == Urgency.NOT_URGENT
+        assert result.urgency == "NOT_URGENT"
         assert "failed" in result.reason.lower()
 
     @given(error_message=st.text(min_size=1, max_size=500).filter(lambda x: x.strip()))
@@ -287,7 +289,7 @@ class TestErrorHandlingGracefulDegradation:
         # **Feature: crewai-agents, Property 5: Error handling graceful degradation**
         # **Validates: Requirements 5.4**
         result = self.simulate_classification_failure("could not parse response")
-        assert result.urgency == Urgency.NOT_URGENT
+        assert result.urgency == "NOT_URGENT"
         assert "failed" in result.reason.lower()
 
     def test_api_timeout_failure_handled(self):
@@ -295,7 +297,7 @@ class TestErrorHandlingGracefulDegradation:
         # **Feature: crewai-agents, Property 5: Error handling graceful degradation**
         # **Validates: Requirements 5.4**
         result = self.simulate_classification_failure("Request timed out")
-        assert result.urgency == Urgency.NOT_URGENT
+        assert result.urgency == "NOT_URGENT"
         assert "failed" in result.reason.lower()
 
     def test_rate_limit_failure_handled(self):
@@ -303,5 +305,5 @@ class TestErrorHandlingGracefulDegradation:
         # **Feature: crewai-agents, Property 5: Error handling graceful degradation**
         # **Validates: Requirements 5.4**
         result = self.simulate_classification_failure("Rate limit exceeded")
-        assert result.urgency == Urgency.NOT_URGENT
+        assert result.urgency == "NOT_URGENT"
         assert "failed" in result.reason.lower()

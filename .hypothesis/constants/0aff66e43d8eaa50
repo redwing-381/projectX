@@ -1,0 +1,4 @@
+# file: /Users/solaimuthua/Documents/GitHub/projectX/src/models/schemas.py
+# hypothesis_version: 6.150.0
+
+['Chat ID for replies', 'Email subject line', 'Gmail message ID', 'Message text content', 'NOT_URGENT', 'ProjectX', 'Sender name', 'Telegram message ID', 'URGENT', 'ok']

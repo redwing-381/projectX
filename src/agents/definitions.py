@@ -81,3 +81,31 @@ def create_alert_agent(llm: LLM, verbose: bool = False) -> Agent:
         verbose=verbose,
         allow_delegation=False,
     )
+
+
+
+def create_telegram_monitor_agent(llm: LLM, verbose: bool = False) -> Agent:
+    """Create the Telegram message monitor agent.
+    
+    Analyzes Telegram messages and classifies urgency.
+    
+    Args:
+        llm: The LLM instance to use.
+        verbose: Whether to enable verbose logging.
+    
+    Returns:
+        Configured Telegram Monitor Agent.
+    """
+    return Agent(
+        role="Telegram Message Monitor",
+        goal="Monitor and classify Telegram messages for urgency",
+        backstory="""You are an expert at analyzing Telegram messages to determine 
+        if they require immediate attention. You understand context, urgency 
+        indicators, and can distinguish between casual messages and urgent 
+        communications. You consider the sender, message content, and any 
+        forwarded context. You always provide a brief reason for your 
+        classification as URGENT or NOT_URGENT.""",
+        llm=llm,
+        verbose=verbose,
+        allow_delegation=False,
+    )

@@ -22,6 +22,7 @@ def create_alert(
     urgency: str,
     reason: str,
     sms_sent: bool = False,
+    source: str = "email",
 ) -> AlertHistory:
     """Create a new alert history record."""
     alert = AlertHistory(
@@ -32,6 +33,7 @@ def create_alert(
         urgency=urgency,
         reason=reason,
         sms_sent=sms_sent,
+        source=source,
     )
     db.add(alert)
     db.commit()
