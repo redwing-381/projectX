@@ -11,6 +11,13 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_base_url: str = "https://openrouter.ai/api/v1"  # OpenRouter by default
     llm_model: str = "openai/gpt-4o-mini"  # OpenRouter model format
+    
+    # CrewAI model format (prefix with openrouter/ for CrewAI compatibility)
+    crewai_model: str = "openrouter/openai/gpt-4o-mini"
+
+    # CrewAI settings
+    crewai_verbose: bool = False  # Set True for debugging agent execution
+    crewai_max_retries: int = 3  # Max retries for agent failures
 
     # Gmail OAuth
     google_client_id: str = ""

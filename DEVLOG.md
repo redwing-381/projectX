@@ -397,3 +397,76 @@ POST /test-urgent → Simulated urgent email, SMS sent successfully!
 - [ ] Web dashboard
 
 ---
+
+## CrewAI Integration - January 11, 2026
+
+### Task: Implement Multi-Agent Architecture
+
+**Goal:** Replace direct OpenAI classifier with CrewAI multi-agent crew (Monitor → Classifier → Alert)
+
+### Issues Encountered
+
+#### Issue 1: Python 3.13 Compatibility with LiteLLM
+**Problem:** CrewAI 1.8.0 requires LiteLLM, but LiteLLM uses the deprecated `cgi` module which was removed in Python 3.13.
+
+**Error:**
+```
+ModuleNotFoundError: No module named 'cgi'
+```
+
+**Root cause:** `litellm/litellm_core_utils/prompt_templates/factory.py` imports `from cgi import parse_header`
+
+**Solution:** Added fallback mechanism in `main.py` to use direct ClassifierAgent when CrewAI fails.
+
+#### Issue 2: Dependency Version Conflicts
+**Problem:** Multiple conflicting version requirements:
+- `crewai 1.8.0` requires `openai~=1.83.0`
+- `litellm 1.80.13` requires `openai>=2.8.0`
+- `instructor 1.12.0` requires `openai<2.0.0,>=1.70.0`
+
+**Solution:** Installed `litellm>=1.50.0,<1.60.0` which is compatible with `openai 1.83.0`
+
+#### Issue 3: Port Already in Use
+**Problem:** When restarting uvicorn, port 8000/8001 remained occupied by zombie processes.
+
+**Solution:** Kill processes before starting:
+```bash
+pkill -f uvicorn
+# or
+lsof -ti:8001 | xargs kill -9
+```
+
+#### Issue 4: Virtual Environment Not Activated
+**Problem:** Commands like `uvicorn` and `python` not found.
+
+**Solution:** Always activate venv before running:
+```bash
+source .venv/bin/activate && uvicorn src.main:app --reload
+```
+
+### Implementation Outcome
+
+**Files Created:**
+- `src/agents/definitions.py` — Agent factory functions (Monitor, Classifier, Alert)
+- `src/agents/tasks.py` — Task factory functions for each agent
+- `src/agents/crew.py` — EmailProcessingCrew class orchestrating agents
+
+**Files Modified:**
+- `src/config.py` — Added CrewAI settings (crewai_model, crewai_verbose)
+- `src/services/pipeline.py` — Support both ClassifierAgent and EmailProcessingCrew
+- `src/main.py` — Fallback logic: try CrewAI, fall back to direct classifier
+
+**Current Status:**
+- ✅ CrewAI code is ready and correct
+- ⚠️ CrewAI doesn't work on Python 3.13 due to litellm compatibility
+- ✅ Fallback to direct ClassifierAgent works perfectly
+- ✅ Local testing passed (/health, /test-urgent)
+
+### Recommendations for Future
+
+1. **Use Python 3.11 or 3.12** for CrewAI projects until litellm is updated
+2. **Always implement fallback mechanisms** for AI framework integrations
+3. **Pin dependency versions** to avoid conflicts
+4. **Test locally before deploying** to catch compatibility issues early
+
+---

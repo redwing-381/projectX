@@ -1,9 +1,9 @@
 # Technical Architecture
 
 ## Technology Stack
-- **Language**: Python 3.11+
-- **AI Framework**: CrewAI for multi-agent orchestration
-- **LLM**: OpenAI GPT-4o-mini
+- **Language**: Python 3.11 or 3.12 (NOT 3.13 - see Known Issues)
+- **AI Framework**: CrewAI for multi-agent orchestration (with fallback to direct OpenAI)
+- **LLM**: OpenAI GPT-4o-mini (via OpenRouter)
 - **Backend**: FastAPI (async, modern, auto-docs)
 - **CLI**: Typer (modern Python CLI framework)
 - **Web**: FastAPI + Jinja2 templates
@@ -11,6 +11,11 @@
 - **SMS**: Twilio API
 - **Email**: Gmail API (OAuth 2.0)
 - **Deployment**: Railway
+
+## ⚠️ Important: Python Version
+**Use Python 3.11 or 3.12 for full CrewAI support.**
+
+Python 3.13 has compatibility issues with LiteLLM (required by CrewAI) due to the removed `cgi` module. The app includes a fallback to direct OpenAI classifier when CrewAI fails.
 
 ## Architecture Overview
 ```

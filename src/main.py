@@ -36,7 +36,6 @@ async def lifespan(app: FastAPI):
         from src.services.gmail import GmailService
         from src.services.twilio_sms import TwilioService
         from src.services.pipeline import Pipeline
-        from src.agents.classifier import ClassifierAgent
 
         # Initialize services
         gmail = GmailService(
@@ -45,12 +44,26 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Gmail service created")
 
-        classifier = ClassifierAgent(
-            api_key=settings.llm_api_key,
-            base_url=settings.llm_base_url,
-            model=settings.llm_model,
-        )
-        logger.info("Classifier agent created")
+        # Try CrewAI first, fall back to direct classifier if it fails
+        classifier = None
+        try:
+            from src.agents.crew import EmailProcessingCrew
+            classifier = EmailProcessingCrew(
+                api_key=settings.llm_api_key,
+                model=settings.crewai_model,
+                verbose=settings.crewai_verbose,
+            )
+            logger.info("CrewAI crew created")
+        except Exception as crew_error:
+            logger.warning(f"CrewAI initialization failed: {crew_error}")
+            logger.info("Falling back to direct classifier...")
+            from src.agents.classifier import ClassifierAgent
+            classifier = ClassifierAgent(
+                api_key=settings.llm_api_key,
+                base_url=settings.llm_base_url,
+                model=settings.llm_model,
+            )
+            logger.info("Direct classifier agent created (fallback)")
 
         twilio = TwilioService(
             account_sid=settings.twilio_account_sid,
@@ -157,6 +170,7 @@ async def test_urgent():
         )
 
     from src.models.schemas import Email
+    from src.agents.crew import EmailProcessingCrew
 
     # Simulate an urgent email
     test_email = Email(
@@ -167,8 +181,11 @@ async def test_urgent():
     )
 
     try:
-        # Classify the test email
-        classification = await pipeline.classifier.classify(test_email)
+        # Classify the test email (handle both crew and direct classifier)
+        if isinstance(pipeline.classifier, EmailProcessingCrew):
+            classification = pipeline.classifier.process_email(test_email)
+        else:
+            classification = await pipeline.classifier.classify(test_email)
 
         result = {
             "email": {

@@ -1,6 +1,7 @@
 """Pipeline orchestrator for email-to-SMS flow."""
 
 import logging
+from typing import Union
 
 from src.models.schemas import (
     Email,
@@ -11,8 +12,12 @@ from src.models.schemas import (
 from src.services.gmail import GmailService
 from src.services.twilio_sms import TwilioService
 from src.agents.classifier import ClassifierAgent
+from src.agents.crew import EmailProcessingCrew
 
 logger = logging.getLogger(__name__)
+
+# Type alias for classifier (supports both old and new)
+ClassifierType = Union[ClassifierAgent, EmailProcessingCrew]
 
 
 class Pipeline:
@@ -21,7 +26,7 @@ class Pipeline:
     def __init__(
         self,
         gmail: GmailService,
-        classifier: ClassifierAgent,
+        classifier: ClassifierType,
         twilio: TwilioService,
         alert_phone: str,
     ):
@@ -29,7 +34,7 @@ class Pipeline:
 
         Args:
             gmail: Gmail service for fetching emails.
-            classifier: Classifier agent for urgency detection.
+            classifier: Classifier agent or CrewAI crew for urgency detection.
             twilio: Twilio service for sending SMS.
             alert_phone: Phone number to send alerts to.
         """
@@ -37,6 +42,7 @@ class Pipeline:
         self.classifier = classifier
         self.twilio = twilio
         self.alert_phone = alert_phone
+        self._use_crew = isinstance(classifier, EmailProcessingCrew)
 
     async def run(self, max_emails: int = 10) -> PipelineResult:
         """Execute full pipeline: fetch → classify → alert.
@@ -88,8 +94,14 @@ class Pipeline:
         """
         logger.info(f"Processing email from {email.sender}: {email.subject[:50]}...")
 
-        # Classify urgency
-        classification = await self.classifier.classify(email)
+        # Classify urgency using either CrewAI or direct classifier
+        if self._use_crew:
+            logger.debug("Using CrewAI crew for classification")
+            classification = self.classifier.process_email(email)
+        else:
+            logger.debug("Using direct classifier for classification")
+            classification = await self.classifier.classify(email)
+            
         logger.info(
             f"Classification: {classification.urgency.value} - {classification.reason}"
         )
