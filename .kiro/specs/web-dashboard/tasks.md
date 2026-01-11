@@ -125,7 +125,7 @@ Build a FastAPI + Jinja2 web dashboard with PostgreSQL persistence for alert his
   - Run /check, verify alert history updates
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Deploy and verify
+- [x] 9. Deploy and verify
   - Add DATABASE_URL to Railway environment variables
   - Push to GitHub for auto-deploy
   - Verify dashboard works on Railway

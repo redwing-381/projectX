@@ -624,3 +624,71 @@ projectx test
 Now the CLI can be used from any machine without the codebase - just install and run!
 
 ---
+
+
+## Web Dashboard Deployed - January 11, 2026
+
+### Task: Build Web Dashboard with PostgreSQL
+
+**Goal:** Create a web interface for managing VIP senders, keywords, viewing alert history, and monitoring status.
+
+### Implementation Complete
+
+**Database Layer:**
+- `src/db/database.py` - SQLAlchemy engine with connection pooling
+- `src/db/models.py` - AlertHistory, VIPSender, KeywordRule, Settings models
+- `src/db/crud.py` - CRUD operations for all models
+
+**Web Routes:**
+- `src/api/web.py` - FastAPI router with all dashboard endpoints
+
+**Templates (Tailwind CSS):**
+- `src/templates/base.html` - Navigation and layout
+- `src/templates/dashboard.html` - Stats, recent alerts
+- `src/templates/history.html` - Paginated alert history with filters
+- `src/templates/vip_senders.html` - Add/remove VIP senders
+- `src/templates/keywords.html` - Add/remove keywords
+- `src/templates/settings.html` - Configuration display
+
+**Classifier Updates:**
+- `src/agents/classifier.py` - Now checks VIP senders and keywords before LLM
+
+**Pipeline Updates:**
+- `src/services/pipeline.py` - Saves alert history to database
+
+### Deployment
+
+**Issue encountered:** Missing `psycopg2-binary` dependency for PostgreSQL.
+
+**Fix:** Added to `pyproject.toml` and redeployed.
+
+**Railway setup:**
+- PostgreSQL database provisioned
+- `DATABASE_URL` environment variable linked
+
+### Verification
+
+```bash
+curl https://projectx-production-0eeb.up.railway.app/health
+# {"status":"ok","app_name":"ProjectX"}
+
+curl https://projectx-production-0eeb.up.railway.app/settings | grep "Database"
+# Database: Connected
+
+# VIP sender persistence test
+curl -X POST -d "email=test@example.com" .../vip-senders/add
+# 303 redirect, data saved to PostgreSQL
+```
+
+### Dashboard Features
+
+- ✅ Dashboard with stats (emails checked, alerts sent)
+- ✅ Alert history with pagination and filters
+- ✅ VIP senders management (add/remove)
+- ✅ Keywords management (add/remove)
+- ✅ Settings page with DB connection status
+- ✅ PostgreSQL persistence on Railway
+
+**Live URL:** https://projectx-production-0eeb.up.railway.app/
+
+---
