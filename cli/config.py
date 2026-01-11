@@ -22,6 +22,10 @@ class CLIConfig(BaseModel):
         default=DEFAULT_SERVER_URL,
         description="ProjectX server URL",
     )
+    api_key: str = Field(
+        default="",
+        description="API key for authentication",
+    )
 
 
 def load_config() -> CLIConfig:
@@ -68,3 +72,32 @@ def set_server_url(url: str) -> None:
     config = load_config()
     config.server_url = url.rstrip("/")
     save_config(config)
+
+
+def get_api_key() -> str:
+    """Get the configured API key.
+
+    Returns:
+        API key string (empty if not set).
+    """
+    return load_config().api_key
+
+
+def set_api_key(key: str) -> None:
+    """Set the API key in configuration.
+
+    Args:
+        key: API key to save.
+    """
+    config = load_config()
+    config.api_key = key
+    save_config(config)
+
+
+def is_logged_in() -> bool:
+    """Check if user has an API key configured.
+
+    Returns:
+        True if API key is set.
+    """
+    return bool(load_config().api_key)

@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     debug: bool = False
     app_name: str = "ProjectX"
     monitoring_paused: bool = False  # Pause email monitoring
+    
+    # API Authentication
+    api_key: str = ""  # Secret key for CLI authentication
 
     class Config:
         env_file = ".env"

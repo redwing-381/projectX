@@ -25,15 +25,24 @@ class ConnectionError(Exception):
 class ProjectXClient:
     """API client for ProjectX server."""
 
-    def __init__(self, base_url: str, timeout: float = 30.0):
+    def __init__(self, base_url: str, api_key: str = "", timeout: float = 120.0):
         """Initialize the client.
 
         Args:
             base_url: Server base URL.
-            timeout: Request timeout in seconds.
+            api_key: API key for authentication.
+            timeout: Request timeout in seconds (default 120s for long operations).
         """
         self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
         self.timeout = timeout
+
+    def _get_headers(self) -> dict:
+        """Get request headers including auth if configured."""
+        headers = {}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return headers
 
     def _request(self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Make an HTTP request to the server.
@@ -51,18 +60,25 @@ class ProjectXClient:
             APIError: If server returns an error response.
         """
         url = f"{self.base_url}{endpoint}"
+        headers = self._get_headers()
 
         try:
             with httpx.Client(timeout=self.timeout) as client:
                 if method.upper() == "GET":
-                    response = client.get(url)
+                    response = client.get(url, headers=headers)
                 elif method.upper() == "POST":
                     if data:
-                        response = client.post(url, data=data)
+                        response = client.post(url, data=data, headers=headers)
                     else:
-                        response = client.post(url)
+                        response = client.post(url, headers=headers)
                 else:
                     raise ValueError(f"Unsupported method: {method}")
+
+                if response.status_code == 401:
+                    raise APIError("Authentication required. Run 'projectx login' first.", 401)
+                
+                if response.status_code == 403:
+                    raise APIError("Invalid API key. Run 'projectx login' to re-authenticate.", 403)
 
                 if response.status_code >= 400:
                     # Try to get error detail from response

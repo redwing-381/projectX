@@ -10,7 +10,7 @@ from rich.table import Table
 from rich.panel import Panel
 from rich import print as rprint
 
-from cli.config import load_config, save_config, CLIConfig, get_server_url, set_server_url
+from cli.config import load_config, save_config, CLIConfig, get_server_url, set_server_url, get_api_key, set_api_key, is_logged_in
 from cli.client import ProjectXClient, APIError, ConnectionError
 
 # Create Typer app
@@ -39,7 +39,15 @@ def help(
     """Show all available commands."""
     console.print("\n[bold blue]ProjectX CLI[/bold blue] - Smart notification bridge\n")
     
-    console.print("[bold]Main Commands:[/bold]")
+    console.print("[bold]Authentication:[/bold]")
+    table0 = Table(show_header=False, box=None, padding=(0, 2))
+    table0.add_column("Command", style="cyan")
+    table0.add_column("Description")
+    table0.add_row("projectx login", "Authenticate with your API key")
+    table0.add_row("projectx logout", "Remove saved API key")
+    console.print(table0)
+    
+    console.print("\n[bold]Main Commands:[/bold]")
     table = Table(show_header=False, box=None, padding=(0, 2))
     table.add_column("Command", style="cyan")
     table.add_column("Description")
@@ -70,9 +78,60 @@ def help(
     console.print()
 
 
+@app.command()
+def login():
+    """Authenticate with your API key."""
+    console.print("\n[bold]ProjectX Login[/bold]")
+    console.print("Enter your API key to authenticate with the server.")
+    console.print("[dim]You can find your API key in your server's environment variables (API_KEY)[/dim]\n")
+    
+    # Prompt for API key (hidden input like password)
+    api_key = typer.prompt("API Key", hide_input=True)
+    
+    if not api_key or not api_key.strip():
+        console.print("[red]✗[/red] API key cannot be empty")
+        raise typer.Exit(code=1)
+    
+    # Test the API key by making a request
+    client = ProjectXClient(get_server_url(), api_key.strip())
+    
+    try:
+        with console.status("[bold blue]Verifying API key...[/bold blue]"):
+            result = client.health()
+        
+        # Save the API key
+        set_api_key(api_key.strip())
+        console.print(f"[green]✓[/green] Logged in successfully!")
+        console.print(f"  Server: {get_server_url()}")
+        console.print()
+        
+    except APIError as e:
+        if e.status_code in (401, 403):
+            console.print(f"[red]✗[/red] Invalid API key")
+        else:
+            console.print(f"[red]✗[/red] Server error: {e.message}")
+        raise typer.Exit(code=1)
+    except ConnectionError as e:
+        console.print(f"[red]✗[/red] Could not connect to server: {e.message}")
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def logout():
+    """Remove saved API key."""
+    if not is_logged_in():
+        console.print("\n[yellow]○[/yellow] Not logged in")
+        console.print()
+        return
+    
+    set_api_key("")
+    console.print("\n[green]✓[/green] Logged out successfully")
+    console.print()
+
+
 def get_client() -> ProjectXClient:
     """Get configured API client."""
-    return ProjectXClient(get_server_url())
+    return ProjectXClient(get_server_url(), get_api_key())
 
 
 def handle_error(e: Exception, json_output: bool = False) -> None:
@@ -251,10 +310,16 @@ def config_show(
     config = load_config()
 
     if json_output:
-        console.print(config.model_dump_json(indent=2))
+        # Don't expose API key in JSON output
+        output = {"server_url": config.server_url, "logged_in": bool(config.api_key)}
+        console.print(json.dumps(output, indent=2))
     else:
         console.print("\n[bold]ProjectX Configuration[/bold]")
         console.print(f"  Server URL: {config.server_url}")
+        if config.api_key:
+            console.print(f"  Auth: [green]✓ Logged in[/green]")
+        else:
+            console.print(f"  Auth: [yellow]○ Not logged in[/yellow] (run 'projectx login')")
         console.print()
 
 

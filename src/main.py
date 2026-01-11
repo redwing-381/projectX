@@ -5,8 +5,9 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from src.config import get_settings
 from src.api.web import router as web_router
@@ -27,6 +28,42 @@ telegram_userbot = None
 telegram_userbot_task = None
 monitoring_task = None
 monitoring_running = False
+
+# Security
+security = HTTPBearer(auto_error=False)
+
+
+def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)) -> bool:
+    """Verify API key from Authorization header.
+    
+    Returns True if:
+    - No API_KEY is configured (auth disabled)
+    - Valid API key provided
+    
+    Raises HTTPException if:
+    - API_KEY is configured but no credentials provided
+    - API_KEY is configured but credentials don't match
+    """
+    settings = get_settings()
+    
+    # If no API key configured, allow all requests (for development)
+    if not settings.api_key:
+        return True
+    
+    # API key is configured, require valid credentials
+    if not credentials:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required. Use 'projectx login' to authenticate.",
+        )
+    
+    if credentials.credentials != settings.api_key:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid API key",
+        )
+    
+    return True
 
 
 @asynccontextmanager
@@ -292,7 +329,7 @@ async def status():
 
 
 @app.post("/check", response_model=CheckResponse)
-async def check_emails() -> CheckResponse:
+async def check_emails(authenticated: bool = Depends(verify_api_key)) -> CheckResponse:
     """Run the email check pipeline.
 
     Fetches unread emails, classifies urgency, and sends SMS for urgent ones.
@@ -331,7 +368,7 @@ async def check_emails() -> CheckResponse:
 
 
 @app.post("/test-urgent")
-async def test_urgent():
+async def test_urgent(authenticated: bool = Depends(verify_api_key)):
     """Test endpoint to simulate an urgent email classification and SMS.
 
     This bypasses Gmail and tests the classifier + SMS flow directly.

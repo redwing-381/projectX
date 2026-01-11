@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Request, Depends, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -17,6 +18,27 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="src/templates")
+
+# Security for API endpoints
+security = HTTPBearer(auto_error=False)
+
+
+def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)) -> bool:
+    """Verify API key from Authorization header."""
+    settings = get_settings()
+    
+    if not settings.api_key:
+        return True
+    
+    if not credentials:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    if credentials.credentials != settings.api_key:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Invalid API key")
+    
+    return True
 
 
 def is_db_connected() -> bool:
@@ -393,11 +415,11 @@ async def toggle_monitoring():
 
 
 # =============================================================================
-# API Endpoints for CLI
+# API Endpoints for CLI (Protected)
 # =============================================================================
 
 @router.get("/api/monitoring")
-async def get_monitoring_status():
+async def get_monitoring_status(authenticated: bool = Depends(verify_api_key)):
     """Get current monitoring status (for CLI)."""
     from src.main import monitoring_running
     
@@ -424,7 +446,7 @@ async def get_monitoring_status():
 
 
 @router.post("/api/monitoring/start")
-async def start_monitoring():
+async def start_monitoring(authenticated: bool = Depends(verify_api_key)):
     """Enable scheduled monitoring (for CLI)."""
     if engine is not None:
         try:
@@ -443,7 +465,7 @@ async def start_monitoring():
 
 
 @router.post("/api/monitoring/stop")
-async def stop_monitoring():
+async def stop_monitoring(authenticated: bool = Depends(verify_api_key)):
     """Disable scheduled monitoring (for CLI)."""
     if engine is not None:
         try:
@@ -462,7 +484,7 @@ async def stop_monitoring():
 
 
 @router.post("/api/monitoring/interval")
-async def set_monitoring_interval(minutes: int = Form(...)):
+async def set_monitoring_interval(minutes: int = Form(...), authenticated: bool = Depends(verify_api_key)):
     """Set monitoring interval (for CLI)."""
     if minutes < 1 or minutes > 1440:
         return {"success": False, "error": "Interval must be between 1 and 1440 minutes"}
