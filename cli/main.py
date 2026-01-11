@@ -39,6 +39,9 @@ def handle_error(e: Exception, json_output: bool = False) -> None:
     Args:
         e: Exception to handle.
         json_output: If True, output JSON format.
+    
+    Raises:
+        typer.Exit: Always exits with code 1.
     """
     if isinstance(e, ConnectionError):
         message = f"Connection failed: {e.message}"

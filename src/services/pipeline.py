@@ -158,19 +158,3 @@ class Pipeline:
             reason=classification.reason,
             sms_sent=sms_sent,
         )
-
-    async def _save_and_return(
-        self, email: Email, classification, sms_sent: bool
-    ) -> AlertResult:
-        """Save to database and return AlertResult."""
-        # Save to database
-        save_alert_to_db(email, classification, sms_sent)
-        
-        return AlertResult(
-            email_id=email.id,
-            sender=email.sender,
-            subject=email.subject,
-            urgency=classification.urgency,
-            reason=classification.reason,
-            sms_sent=sms_sent,
-        )

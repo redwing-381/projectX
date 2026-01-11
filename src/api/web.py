@@ -276,7 +276,10 @@ async def settings_page(request: Request):
 
 @router.post("/settings/toggle-monitoring")
 async def toggle_monitoring():
-    """Toggle monitoring status."""
-    # This would need to update a setting - for now just redirect
-    # In production, you'd update a database setting or environment variable
+    """Toggle monitoring status.
+    
+    TODO: Implement actual toggle functionality.
+    Currently just redirects - would need to update a database setting
+    or environment variable in production.
+    """
     return RedirectResponse("/settings", status_code=303)

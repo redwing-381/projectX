@@ -3,6 +3,8 @@
 import os
 from contextlib import contextmanager
 
+from typing import Generator
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
@@ -49,7 +51,7 @@ def get_db():
 
 
 @contextmanager
-def get_db_session() -> Session:
+def get_db_session() -> Generator[Session, None, None]:
     """Context manager for database session (for non-FastAPI code)."""
     if SessionLocal is None:
         raise RuntimeError("Database not configured. Set DATABASE_URL environment variable.")
