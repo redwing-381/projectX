@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ProjectX Monitor</string>
+    
+    <!-- Settings -->
+    <string name="server_url">Server URL</string>
+    <string name="server_url_hint">https://your-server.railway.app</string>
+    <string name="api_key">API Key</string>
+    <string name="api_key_hint">Enter your API key</string>
+    <string name="test_connection">Test Connection</string>
+    <string name="save_settings">Save Settings</string>
+    
+    <!-- Apps -->
+    <string name="monitored_apps">Monitored Apps</string>
+    <string name="select_all">Select All</string>
+    <string name="deselect_all">Deselect All</string>
+    
+    <!-- Sync -->
+    <string name="sync_settings">Sync Settings</string>
+    <string name="sync_interval">Sync Interval</string>
+    <string name="sync_now">Sync Now</string>
+    
+    <!-- Status -->
+    <string name="status">Status</string>
+    <string name="notification_access">Notification Access</string>
+    <string name="granted">Granted</string>
+    <string name="not_granted">Not Granted</string>
+    <string name="enable_access">Enable Access</string>
+    <string name="queue_size">Notifications in Queue</string>
+    <string name="last_sync">Last Sync</string>
+    <string name="never">Never</string>
+    <string name="connection_status">Connection Status</string>
+    <string name="connected">Connected</string>
+    <string name="not_configured">Not Configured</string>
+    
+    <!-- Notifications -->
+    <string name="monitoring_active">Monitoring Active</string>
+    <string name="monitoring_description">Capturing notifications from selected apps</string>
+    
+    <!-- Messages -->
+    <string name="settings_saved">Settings saved</string>
+    <string name="connection_success">Connection successful!</string>
+    <string name="connection_failed">Connection failed</string>
+    <string name="sync_started">Sync started</string>
+    <string name="sync_complete">Sync complete</string>
+    <string name="sync_failed">Sync failed</string>
+    <string name="please_configure">Please configure server URL and API key</string>
+</resources>

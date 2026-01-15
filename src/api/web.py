@@ -503,3 +503,154 @@ async def set_monitoring_interval(minutes: int = Form(...), authenticated: bool 
             return {"success": False, "error": str(e)}
     
     return {"success": False, "error": "Database not connected"}
+
+
+# =============================================================================
+# Android App Notifications API
+# =============================================================================
+
+from pydantic import BaseModel
+from typing import List
+
+
+class NotificationPayload(BaseModel):
+    """Individual notification from Android app."""
+    id: str
+    app: str
+    sender: str
+    text: str
+    timestamp: int
+
+
+class NotificationBatchRequest(BaseModel):
+    """Batch of notifications from Android app."""
+    device_id: str
+    notifications: List[NotificationPayload]
+
+
+class NotificationBatchResponse(BaseModel):
+    """Response after processing notifications."""
+    success: bool
+    processed: int
+    urgent_count: int
+    message: str = ""
+
+
+@router.post("/api/notifications", response_model=NotificationBatchResponse)
+async def receive_notifications(
+    request: NotificationBatchRequest,
+    authenticated: bool = Depends(verify_api_key)
+):
+    """Receive notifications from Android app, classify urgency, send SMS for urgent ones.
+    
+    This endpoint:
+    1. Receives a batch of notifications from the Android app
+    2. Classifies each notification for urgency using the AI classifier
+    3. Sends SMS alerts for urgent notifications
+    4. Saves all notifications to the database
+    """
+    from src.main import pipeline
+    from src.models.schemas import TelegramMessage, UrgencyLevel
+    from fastapi import HTTPException
+    
+    if pipeline is None:
+        raise HTTPException(status_code=503, detail="Pipeline not initialized")
+    
+    processed = 0
+    urgent_count = 0
+    
+    for notif in request.notifications:
+        try:
+            # Create a message object for classification
+            # Reuse TelegramMessage schema since it has similar structure
+            message = TelegramMessage(
+                sender=notif.sender,
+                text=notif.text,
+                timestamp=notif.timestamp,
+            )
+            
+            # Classify using the crew/classifier
+            try:
+                from src.agents.telegram_crew import TelegramProcessingCrew
+                crew = TelegramProcessingCrew(verbose=False)
+                classification = crew.process_message(message)
+            except Exception as crew_error:
+                logger.warning(f"Crew classification failed: {crew_error}, using fallback")
+                # Fallback: simple keyword-based classification
+                urgent_keywords = ["urgent", "emergency", "asap", "help", "important", "call me"]
+                is_urgent = any(kw in notif.text.lower() for kw in urgent_keywords)
+                
+                class SimpleClassification:
+                    urgency = "URGENT" if is_urgent else "NOT_URGENT"
+                    reason = "Keyword match" if is_urgent else "No urgent keywords"
+                    sms_message = f"{notif.app}: {notif.sender} - {notif.text[:100]}" if is_urgent else None
+                
+                classification = SimpleClassification()
+            
+            # Save to database
+            if engine is not None:
+                try:
+                    from src.db.database import SessionLocal
+                    db = SessionLocal()
+                    try:
+                        crud.create_alert(
+                            db=db,
+                            sender=notif.sender,
+                            subject=f"{notif.app} notification",
+                            urgency=classification.urgency,
+                            reason=classification.reason,
+                            sms_sent=False,
+                            source=f"android:{notif.app.lower()}",
+                        )
+                    finally:
+                        db.close()
+                except Exception as db_error:
+                    logger.warning(f"Failed to save notification: {db_error}")
+            
+            # Send SMS if urgent
+            if classification.urgency == "URGENT":
+                urgent_count += 1
+                sms_text = getattr(classification, 'sms_message', None) or f"{notif.app}: {notif.sender} - {notif.text[:100]}"
+                
+                try:
+                    settings = get_settings()
+                    sent = pipeline.twilio.send_sms(
+                        to_number=settings.alert_phone_number,
+                        message=sms_text,
+                    )
+                    if sent:
+                        logger.info(f"SMS sent for urgent {notif.app} notification from {notif.sender}")
+                        # Update database record
+                        if engine is not None:
+                            try:
+                                from src.db.database import SessionLocal
+                                db = SessionLocal()
+                                try:
+                                    latest = crud.get_recent_alerts(db, limit=1)
+                                    if latest:
+                                        latest[0].sms_sent = True
+                                        db.commit()
+                                finally:
+                                    db.close()
+                            except Exception:
+                                pass
+                except Exception as sms_error:
+                    logger.error(f"Failed to send SMS: {sms_error}")
+            
+            processed += 1
+            
+        except Exception as e:
+            logger.error(f"Error processing notification {notif.id}: {e}")
+    
+    message = f"Processed {processed} notifications"
+    if urgent_count > 0:
+        message += f", {urgent_count} urgent (SMS sent)"
+    
+    logger.info(f"Android batch: {message} from device {request.device_id}")
+    
+    return NotificationBatchResponse(
+        success=True,
+        processed=processed,
+        urgent_count=urgent_count,
+        message=message,
+    )
