@@ -1234,3 +1234,95 @@ src/api/
 **Spec Location:** `.kiro/specs/codebase-modularization/`
 
 ---
+
+
+## January 17, 2026
+
+### Unified Cross-Platform Monitoring Control
+
+**Goal:** Enable start/stop monitoring control across all platforms (Web, CLI, Mobile) from any interface.
+
+**Problem Identified:**
+- Email monitoring could be controlled from Web/CLI
+- Mobile app monitoring ran independently on the phone
+- No way to remotely start/stop mobile monitoring from Web or CLI
+- User workflow: Leave phone at home, want to control everything from office laptop
+
+### Implementation
+
+**Database Changes:**
+- Added `monitoring_enabled` column to `mobile_devices` table
+- Created new `mobile_commands` table for queuing remote commands
+
+**New API Endpoints:**
+- `GET /api/monitoring/unified` - Get status of all platforms (email + mobile)
+- `POST /api/monitoring/start-all` - Start monitoring on all platforms
+- `POST /api/monitoring/stop-all` - Stop monitoring on all platforms
+- `GET /api/mobile/commands/{device_id}` - Mobile app polls for commands
+- `POST /api/mobile/commands/{device_id}/ack` - Acknowledge command execution
+- `POST /api/mobile/control/start` - Start mobile monitoring
+- `POST /api/mobile/control/stop` - Stop mobile monitoring
+- `GET /api/mobile/status` - Get all mobile device statuses
+
+**Web UI Updates:**
+- New "Unified Monitoring Control" section in Settings
+- "Start All Monitoring" / "Stop All Monitoring" buttons
+- Separate controls for Email and Mobile monitoring
+- Shows device count and enabled status
+
+**CLI Updates:**
+- `projectx monitor status` - Now shows both email and mobile status
+- `projectx monitor start --all` - Start all platforms
+- `projectx monitor stop --all` - Stop all platforms
+
+**Mobile App Integration:**
+- Server respects `monitoring_enabled` flag when processing notifications
+- Mobile app can poll `/api/mobile/commands/{device_id}` for remote commands
+- Command queue system: Web/CLI queues commands, mobile app polls and executes
+
+### Files Modified
+
+- `src/db/models.py` - Added `monitoring_enabled` to MobileDevice, new MobileCommand model
+- `src/db/crud.py` - Added command queue and device monitoring CRUD functions
+- `src/api/routes/mobile_api.py` - Added command polling and control endpoints
+- `src/api/routes/monitoring_api.py` - Added unified status and start/stop-all endpoints
+- `src/api/routes/settings.py` - Added unified control web endpoints
+- `src/templates/settings.html` - New unified monitoring control UI
+- `cli/main.py` - Added `--all` flag to monitor start/stop commands
+
+### User Workflow Now Supported
+
+1. **Morning at home:** Start monitoring from phone app
+2. **At office:** View unified status from web/CLI - see both email + mobile active
+3. **Need focus:** Click "Stop All Monitoring" from web - both email and mobile stop
+4. **Break time:** Run `projectx monitor start --all` from CLI - everything resumes
+5. **End of day:** Check history from any interface - see all notifications
+
+### Mobile Notification Processing Verified
+
+Tested the full flow:
+1. Mobile app syncs notifications to `/api/notifications`
+2. `MobileNotificationAgent` classifies each notification using LLM
+3. VIP senders and keywords checked first (fast path)
+4. Urgent notifications trigger SMS via Twilio
+5. All notifications saved to database with source like `android:whatsapp`
+
+**Test Result:**
+```
+POST /api/notifications with 2 test notifications
+→ Processed 2 notifications, 1 urgent (SMS sent)
+→ SMS delivered to keypad phone ✅
+→ Notifications visible in web history ✅
+```
+
+### Bug Fix: Gmail OAuth Token Expiry
+
+**Issue:** "invalid_grant: Token has been expired or revoked" error when checking emails
+
+**Fix:** Delete `token.json` and restart server to trigger re-authentication:
+```bash
+rm token.json
+# Restart server, complete OAuth flow in browser
+```
+
+---
