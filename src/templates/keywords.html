@@ -3,56 +3,67 @@
 {% block title %}Keyword Rules - ProjectX{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-3xl font-bold">Keyword Rules</h1>
-            <p class="text-gray-400 mt-1">Emails containing these keywords are automatically marked as URGENT</p>
-        </div>
+<div class="page-header">
+    <div>
+        <h1 style="font-size: 24px; font-weight: 700; margin: 0;">Keyword Rules</h1>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">Emails containing these keywords are automatically marked as urgent</p>
     </div>
+</div>
 
+<div class="page-content">
     <!-- Add Form -->
-    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 class="text-lg font-semibold mb-4">Add Keyword</h2>
-        <form action="/keywords/add" method="post" class="flex gap-4">
-            <input type="text" name="keyword" required
-                   placeholder="Enter keyword (e.g., urgent, deadline, emergency)"
-                   class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2">
-            <button type="submit" class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-medium">
-                Add Keyword
-            </button>
-        </form>
+    <div style="background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px; margin-bottom: 24px;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid var(--sidebar-border);">
+            <h3 style="font-size: 15px; font-weight: 600; margin: 0;">Add Keyword</h3>
+        </div>
+        <div style="padding: 20px;">
+            <form action="/keywords/add" method="post" style="display: flex; gap: 12px;">
+                <input type="text" name="keyword" required
+                       placeholder="Enter keyword (e.g., urgent, deadline, emergency)"
+                       style="flex: 1; background: var(--bg-tertiary); border: 1px solid var(--sidebar-border); border-radius: 6px; padding: 10px 14px; color: var(--text-primary); font-size: 13px;">
+                <button type="submit" class="btn btn-primary">Add Keyword</button>
+            </form>
+        </div>
     </div>
 
     <!-- Keywords List -->
-    <div class="bg-gray-800 rounded-xl border border-gray-700">
-        <div class="px-6 py-4 border-b border-gray-700">
-            <h2 class="text-lg font-semibold">Current Keywords ({{ keywords|length }})</h2>
+    <div style="background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px; margin-bottom: 24px;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid var(--sidebar-border);">
+            <h3 style="font-size: 15px; font-weight: 600; margin: 0;">Current Keywords <span style="color: var(--text-muted); font-weight: 400;">({{ keywords|length }})</span></h3>
         </div>
-        <div class="p-6">
+        <div style="padding: 20px;">
             {% if keywords %}
-            <div class="flex flex-wrap gap-3">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
                 {% for kw in keywords %}
-                <div class="flex items-center gap-2 bg-gray-750 rounded-lg px-4 py-2 border border-gray-700">
-                    <span class="font-medium">{{ kw.keyword }}</span>
-                    <form action="/keywords/delete/{{ kw.id }}" method="post" class="inline"
+                <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-tertiary); border-radius: 6px; padding: 10px 14px;">
+                    <span style="width: 6px; height: 6px; border-radius: 50%; background: #ef4444;"></span>
+                    <span style="font-weight: 500; font-size: 13px;">{{ kw.keyword }}</span>
+                    <form action="/keywords/delete/{{ kw.id }}" method="post" style="display: inline; margin: 0;"
                           onsubmit="return confirm('Remove this keyword?')">
-                        <button type="submit" class="text-red-400 hover:text-red-300 ml-2">×</button>
+                        <button type="submit" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; transition: color 0.15s;"
+                                onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
                     </form>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <p class="text-gray-500 text-center py-8">No keywords configured. Add one above to get started.</p>
+            <div style="padding: 32px 20px; text-align: center;">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="margin: 0 auto 12px; opacity: 0.5;">
+                    <line x1="4" y1="9" x2="20" y2="9"/>
+                    <line x1="4" y1="15" x2="20" y2="15"/>
+                    <line x1="10" y1="3" x2="8" y2="21"/>
+                    <line x1="16" y1="3" x2="14" y2="21"/>
+                </svg>
+                <p style="color: var(--text-muted); margin: 0; font-size: 14px;">No keywords configured. Add one above to get started.</p>
+            </div>
             {% endif %}
         </div>
     </div>
 
     <!-- Info -->
-    <div class="bg-blue-900/30 border border-blue-800 rounded-xl p-4">
-        <p class="text-blue-300 text-sm">
-            💡 <strong>Tip:</strong> Keywords are case-insensitive and will match anywhere in the email subject or preview. 
-            Common examples: "urgent", "asap", "deadline", "emergency", "important".
+    <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 14px 16px;">
+        <p style="color: var(--text-secondary); font-size: 13px; margin: 0; line-height: 1.5;">
+            <strong style="color: var(--text-primary);">Tip:</strong> Keywords are case-insensitive and will match anywhere in the email subject or preview. Common examples: "urgent", "asap", "deadline", "emergency", "important".
         </p>
     </div>
 </div>

@@ -3,106 +3,121 @@
 {% block title %}Alert History - ProjectX{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <h1 class="text-3xl font-bold">Alert History</h1>
+<div class="page-header">
+    <div>
+        <h1 style="font-size: 24px; font-weight: 700; margin: 0;">Alert History</h1>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">View all processed notifications and their classifications</p>
+    </div>
+</div>
 
+<div class="page-content">
     <!-- Filters -->
-    <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
-        <form method="get" class="flex flex-wrap gap-4 items-end">
+    <div style="background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+        <form method="get" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;">
             <div>
-                <label class="block text-sm text-gray-400 mb-1">Filter by Status</label>
-                <select name="urgency" class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm">
+                <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Status</label>
+                <select name="urgency" style="background: var(--bg-tertiary); border: 1px solid var(--sidebar-border); border-radius: 6px; padding: 10px 14px; color: var(--text-primary); font-size: 13px; min-width: 140px;">
                     <option value="">All</option>
                     <option value="URGENT" {% if urgency == 'URGENT' %}selected{% endif %}>Urgent Only</option>
                     <option value="NOT_URGENT" {% if urgency == 'NOT_URGENT' %}selected{% endif %}>Normal Only</option>
                 </select>
             </div>
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-sm text-gray-400 mb-1">Search</label>
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Search</label>
                 <input type="text" name="search" value="{{ search or '' }}" 
                        placeholder="Search sender or subject..."
-                       class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm">
+                       style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--sidebar-border); border-radius: 6px; padding: 10px 14px; color: var(--text-primary); font-size: 13px;">
             </div>
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium">
-                Apply Filters
-            </button>
+            <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">Apply</button>
             {% if urgency or search %}
-            <a href="/history" class="text-gray-400 hover:text-white px-4 py-2 text-sm">Clear</a>
+            <a href="/history" style="color: var(--text-muted); padding: 10px 16px; font-size: 13px; text-decoration: none;">Clear</a>
             {% endif %}
         </form>
     </div>
 
     <!-- Results -->
-    <div class="bg-gray-800 rounded-xl border border-gray-700">
-        <div class="p-6">
-            {% if alerts %}
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead>
-                        <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
-                            <th class="pb-3">Source</th>
-                            <th class="pb-3">Sender</th>
-                            <th class="pb-3">Subject</th>
-                            <th class="pb-3">Status</th>
-                            <th class="pb-3">Reason</th>
-                            <th class="pb-3">SMS</th>
-                            <th class="pb-3">Date</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-700">
-                        {% for alert in alerts %}
-                        <tr class="hover:bg-gray-750">
-                            <td class="py-3">
-                                {% if alert.source == 'telegram' %}
-                                <span class="px-2 py-1 bg-blue-900 text-blue-300 rounded text-xs font-medium">TG</span>
-                                {% else %}
-                                <span class="px-2 py-1 bg-gray-700 text-gray-300 rounded text-xs font-medium">Email</span>
-                                {% endif %}
-                            </td>
-                            <td class="py-3 text-sm">{{ alert.sender[:25] }}{% if alert.sender|length > 25 %}...{% endif %}</td>
-                            <td class="py-3 text-sm">{{ alert.subject[:35] }}{% if alert.subject|length > 35 %}...{% endif %}</td>
-                            <td class="py-3">
-                                {% if alert.urgency == 'URGENT' %}
-                                <span class="px-2 py-1 bg-red-900 text-red-300 rounded text-xs font-medium">URGENT</span>
-                                {% else %}
-                                <span class="px-2 py-1 bg-gray-700 text-gray-300 rounded text-xs font-medium">Normal</span>
-                                {% endif %}
-                            </td>
-                            <td class="py-3 text-sm text-gray-400">{{ alert.reason[:30] }}{% if alert.reason|length > 30 %}...{% endif %}</td>
-                            <td class="py-3">
-                                {% if alert.sms_sent %}
-                                <span class="text-green-400">✓ Sent</span>
-                                {% else %}
-                                <span class="text-gray-500">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="py-3 text-sm text-gray-400">{{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-700">
-                <p class="text-sm text-gray-400">
-                    Showing {{ (page - 1) * 20 + 1 }} - {{ (page - 1) * 20 + alerts|length }} of {{ total }} results
-                </p>
-                <div class="flex gap-2">
-                    {% if page > 1 %}
-                    <a href="?page={{ page - 1 }}{% if urgency %}&urgency={{ urgency }}{% endif %}{% if search %}&search={{ search }}{% endif %}" 
-                       class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 text-sm">Previous</a>
-                    {% endif %}
-                    {% if (page * 20) < total %}
-                    <a href="?page={{ page + 1 }}{% if urgency %}&urgency={{ urgency }}{% endif %}{% if search %}&search={{ search }}{% endif %}" 
-                       class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 text-sm">Next</a>
-                    {% endif %}
-                </div>
-            </div>
-            {% else %}
-            <p class="text-gray-500 text-center py-8">No alerts found.</p>
-            {% endif %}
+    <div style="background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px;">
+        {% if alerts %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--sidebar-border);">
+                        <th style="padding: 14px 20px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Source</th>
+                        <th style="padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Sender</th>
+                        <th style="padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Subject</th>
+                        <th style="padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Status</th>
+                        <th style="padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Reason</th>
+                        <th style="padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">SMS</th>
+                        <th style="padding: 14px 20px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in alerts %}
+                    <tr style="border-bottom: 1px solid var(--sidebar-border);">
+                        <td style="padding: 14px 20px;">
+                            {% if 'whatsapp' in (alert.source or '') %}
+                            <span style="padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(37, 211, 102, 0.15); color: #25D366;">WA</span>
+                            {% elif 'instagram' in (alert.source or '') %}
+                            <span style="padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(228, 64, 95, 0.15); color: #E4405F;">IG</span>
+                            {% elif 'telegram' in (alert.source or '') %}
+                            <span style="padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(0, 136, 204, 0.15); color: #0088cc;">TG</span>
+                            {% elif 'slack' in (alert.source or '') %}
+                            <span style="padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(74, 21, 75, 0.15); color: #E01E5A;">SL</span>
+                            {% elif 'discord' in (alert.source or '') %}
+                            <span style="padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(88, 101, 242, 0.15); color: #5865F2;">DC</span>
+                            {% elif 'messenger' in (alert.source or '') %}
+                            <span style="padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(0, 132, 255, 0.15); color: #0084FF;">FB</span>
+                            {% elif 'sms' in (alert.source or '') %}
+                            <span style="padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(107, 114, 128, 0.15); color: #9CA3AF;">SMS</span>
+                            {% else %}
+                            <span style="padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(234, 67, 53, 0.15); color: #EA4335;">EM</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 14px 16px; font-size: 13px;">{{ alert.sender[:25] }}{% if alert.sender|length > 25 %}...{% endif %}</td>
+                        <td style="padding: 14px 16px; font-size: 13px; color: var(--text-secondary);">{{ alert.subject[:35] }}{% if alert.subject|length > 35 %}...{% endif %}</td>
+                        <td style="padding: 14px 16px;">
+                            {% if alert.urgency == 'URGENT' %}
+                            <span style="padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 500; background: rgba(239, 68, 68, 0.15); color: #ef4444;">Urgent</span>
+                            {% else %}
+                            <span style="padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 500; background: var(--bg-tertiary); color: var(--text-muted);">Normal</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 14px 16px; font-size: 12px; color: var(--text-muted);">{{ alert.reason[:30] }}{% if alert.reason|length > 30 %}...{% endif %}</td>
+                        <td style="padding: 14px 16px;">
+                            {% if alert.sms_sent %}
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+                            {% else %}
+                            <span style="color: var(--text-muted);">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 14px 20px; font-size: 12px; color: var(--text-muted);">{{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
+
+        <!-- Pagination -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-top: 1px solid var(--sidebar-border);">
+            <p style="font-size: 13px; color: var(--text-muted); margin: 0;">
+                Showing {{ (page - 1) * 20 + 1 }} - {{ (page - 1) * 20 + alerts|length }} of {{ total }} results
+            </p>
+            <div style="display: flex; gap: 8px;">
+                {% if page > 1 %}
+                <a href="?page={{ page - 1 }}{% if urgency %}&urgency={{ urgency }}{% endif %}{% if search %}&search={{ search }}{% endif %}" 
+                   style="padding: 8px 14px; background: var(--bg-tertiary); border-radius: 6px; font-size: 13px; color: var(--text-primary); text-decoration: none;">Previous</a>
+                {% endif %}
+                {% if (page * 20) < total %}
+                <a href="?page={{ page + 1 }}{% if urgency %}&urgency={{ urgency }}{% endif %}{% if search %}&search={{ search }}{% endif %}" 
+                   style="padding: 8px 14px; background: var(--bg-tertiary); border-radius: 6px; font-size: 13px; color: var(--text-primary); text-decoration: none;">Next</a>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div style="padding: 48px 20px; text-align: center;">
+            <p style="color: var(--text-muted); margin: 0; font-size: 14px;">No alerts found.</p>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

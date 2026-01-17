@@ -1326,3 +1326,52 @@ rm token.json
 ```
 
 ---
+
+### Professional UI Redesign with Sidebar Layout
+
+**Goal:** Transform the web dashboard from a basic Bootstrap-style layout to a professional, modern design similar to ChatGPT, Linear, or other MNC products.
+
+**Changes Completed:**
+
+1. **New Sidebar Layout:**
+   - Fixed 260px sidebar with navigation
+   - Collapsible on mobile with hamburger menu
+   - Dark theme with CSS variables for consistency
+   - Smooth transitions and hover states
+
+2. **Emoji Removal:**
+   - Replaced ALL emojis with SVG icons and colored dots
+   - Status indicators now use 8px colored circles
+   - App badges use abbreviated text (WA, IG, TG, etc.)
+   - Clean, professional appearance
+
+3. **Architecture Page Visualization:**
+   - Horizontal flow diagram showing high-level data flow
+   - Detailed vertical pipeline with numbered steps
+   - Connecting lines between steps
+   - Timing badges and outcome indicators
+   - Icons for each component
+
+4. **Settings Page Linter Fix:**
+   - Moved conditional Jinja2 styles from inline `style` attributes to CSS classes
+   - Pattern: Use `class="{{ 'enabled' if condition else 'disabled' }}"` instead of inline conditionals
+
+**Design System Established:**
+- CSS variables for colors: `--bg-primary`, `--bg-secondary`, `--text-primary`, etc.
+- Section cards: `background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px;`
+- Font sizes: titles 15px, body 13px, labels 11-12px uppercase
+- Status tags: `padding: 4px 10px; border-radius: 4px; font-size: 11px;`
+
+**Files Modified:**
+- `src/templates/base.html` - New sidebar layout with CSS variables
+- `src/templates/dashboard.html` - Updated to extend base, removed emojis
+- `src/templates/notifications.html` - Professional card design
+- `src/templates/history.html` - Clean table styling
+- `src/templates/architecture.html` - New pipeline visualization
+- `src/templates/vip_senders.html` - Consistent styling
+- `src/templates/keywords.html` - Consistent styling
+- `src/templates/settings.html` - Fixed linter errors, professional layout
+
+**Spec Location:** `.kiro/specs/professional-ui-redesign/`
+
+---

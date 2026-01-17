@@ -3,138 +3,182 @@
 {% block title %}Notifications - ProjectX{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-        <h1 class="text-3xl font-bold">Notifications</h1>
-        <span class="text-gray-400">{{ all_count }} total</span>
+<div class="page-header">
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <h1 style="font-size: 24px; font-weight: 700; margin: 0;">Notifications</h1>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">All captured notifications from your devices</p>
+        </div>
+        <span style="font-size: 13px; color: var(--text-muted);">{{ all_count }} total</span>
     </div>
+</div>
+
+<div class="page-content">
+    <style>
+        .filter-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+        .filter-tab {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: var(--bg-tertiary);
+            border: 1px solid transparent;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+        .filter-tab:hover { border-color: var(--sidebar-border); }
+        .filter-tab.active { background: var(--accent-primary); color: white; border-color: var(--accent-primary); }
+        .filter-tab .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .filter-tab .count { font-size: 12px; color: inherit; opacity: 0.7; }
+        .notif-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--sidebar-border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 16px;
+        }
+        .notif-badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+        .notif-content { flex: 1; min-width: 0; }
+        .notif-header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .notif-sender { font-size: 14px; font-weight: 600; }
+        .notif-tag {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .notif-tag.urgent { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .notif-tag.sms { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .notif-subject { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+        .notif-preview { font-size: 13px; color: var(--text-primary); line-height: 1.5; }
+        .notif-time { flex-shrink: 0; text-align: right; }
+        .notif-time-date { font-size: 12px; color: var(--text-muted); }
+        .notif-time-hour { font-size: 12px; color: var(--text-muted); }
+        .empty-state {
+            background: var(--bg-secondary);
+            border: 1px solid var(--sidebar-border);
+            border-radius: 12px;
+            padding: 48px 20px;
+            text-align: center;
+        }
+        .empty-state p { color: var(--text-muted); font-size: 14px; margin: 0; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 24px; }
+        .pagination a {
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .pagination span { font-size: 13px; color: var(--text-muted); }
+    </style>
 
     <!-- Filter Tabs -->
-    <div class="flex flex-wrap gap-2 overflow-x-auto pb-2">
-        <a href="/notifications?app=all" 
-           class="px-4 py-2 rounded-lg font-medium transition-colors {% if current_app == 'all' %}bg-blue-600 text-white{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}">
-            All <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-gray-600">{{ all_count }}</span>
+    <div class="filter-tabs">
+        <a href="/notifications?app=all" class="filter-tab {% if current_app == 'all' %}active{% endif %}">
+            All <span class="count">{{ all_count }}</span>
         </a>
-        <a href="/notifications?app=whatsapp" 
-           class="px-4 py-2 rounded-lg font-medium transition-colors {% if current_app == 'whatsapp' %}bg-green-600 text-white{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}">
-            <span class="inline-block w-3 h-3 rounded-full mr-1" style="background-color: #25D366;"></span>
-            WhatsApp <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-gray-600">{{ app_counts.get('whatsapp', 0) }}</span>
+        <a href="/notifications?app=whatsapp" class="filter-tab {% if current_app == 'whatsapp' %}active{% endif %}">
+            <span class="dot" style="background: #25D366;"></span> WhatsApp <span class="count">{{ app_counts.get('whatsapp', 0) }}</span>
         </a>
-        <a href="/notifications?app=instagram" 
-           class="px-4 py-2 rounded-lg font-medium transition-colors {% if current_app == 'instagram' %}bg-pink-600 text-white{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}">
-            <span class="inline-block w-3 h-3 rounded-full mr-1" style="background-color: #E4405F;"></span>
-            Instagram <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-gray-600">{{ app_counts.get('instagram', 0) }}</span>
+        <a href="/notifications?app=instagram" class="filter-tab {% if current_app == 'instagram' %}active{% endif %}">
+            <span class="dot" style="background: #E4405F;"></span> Instagram <span class="count">{{ app_counts.get('instagram', 0) }}</span>
         </a>
-        <a href="/notifications?app=telegram" 
-           class="px-4 py-2 rounded-lg font-medium transition-colors {% if current_app == 'telegram' %}bg-blue-500 text-white{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}">
-            <span class="inline-block w-3 h-3 rounded-full mr-1" style="background-color: #0088cc;"></span>
-            Telegram <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-gray-600">{{ app_counts.get('telegram', 0) }}</span>
+        <a href="/notifications?app=telegram" class="filter-tab {% if current_app == 'telegram' %}active{% endif %}">
+            <span class="dot" style="background: #0088cc;"></span> Telegram <span class="count">{{ app_counts.get('telegram', 0) }}</span>
         </a>
-        <a href="/notifications?app=slack" 
-           class="px-4 py-2 rounded-lg font-medium transition-colors {% if current_app == 'slack' %}bg-purple-700 text-white{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}">
-            <span class="inline-block w-3 h-3 rounded-full mr-1" style="background-color: #4A154B;"></span>
-            Slack <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-gray-600">{{ app_counts.get('slack', 0) }}</span>
+        <a href="/notifications?app=slack" class="filter-tab {% if current_app == 'slack' %}active{% endif %}">
+            <span class="dot" style="background: #4A154B;"></span> Slack <span class="count">{{ app_counts.get('slack', 0) }}</span>
         </a>
-        <a href="/notifications?app=discord" 
-           class="px-4 py-2 rounded-lg font-medium transition-colors {% if current_app == 'discord' %}bg-indigo-600 text-white{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}">
-            <span class="inline-block w-3 h-3 rounded-full mr-1" style="background-color: #5865F2;"></span>
-            Discord <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-gray-600">{{ app_counts.get('discord', 0) }}</span>
+        <a href="/notifications?app=discord" class="filter-tab {% if current_app == 'discord' %}active{% endif %}">
+            <span class="dot" style="background: #5865F2;"></span> Discord <span class="count">{{ app_counts.get('discord', 0) }}</span>
         </a>
-        <a href="/notifications?app=sms" 
-           class="px-4 py-2 rounded-lg font-medium transition-colors {% if current_app == 'sms' %}bg-gray-500 text-white{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}">
-            <span class="inline-block w-3 h-3 rounded-full mr-1 bg-gray-500"></span>
-            SMS <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-gray-600">{{ app_counts.get('sms', 0) }}</span>
+        <a href="/notifications?app=sms" class="filter-tab {% if current_app == 'sms' %}active{% endif %}">
+            <span class="dot" style="background: #6B7280;"></span> SMS <span class="count">{{ app_counts.get('sms', 0) }}</span>
         </a>
-        <a href="/notifications?app=messenger" 
-           class="px-4 py-2 rounded-lg font-medium transition-colors {% if current_app == 'messenger' %}bg-blue-500 text-white{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}">
-            <span class="inline-block w-3 h-3 rounded-full mr-1" style="background-color: #0084FF;"></span>
-            Messenger <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-gray-600">{{ app_counts.get('messenger', 0) }}</span>
+        <a href="/notifications?app=messenger" class="filter-tab {% if current_app == 'messenger' %}active{% endif %}">
+            <span class="dot" style="background: #0084FF;"></span> Messenger <span class="count">{{ app_counts.get('messenger', 0) }}</span>
         </a>
-        <a href="/notifications?app=email" 
-           class="px-4 py-2 rounded-lg font-medium transition-colors {% if current_app == 'email' %}bg-red-600 text-white{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}">
-            <span class="inline-block w-3 h-3 rounded-full mr-1" style="background-color: #EA4335;"></span>
-            Email <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-gray-600">{{ app_counts.get('email', 0) }}</span>
+        <a href="/notifications?app=email" class="filter-tab {% if current_app == 'email' %}active{% endif %}">
+            <span class="dot" style="background: #EA4335;"></span> Email <span class="count">{{ app_counts.get('email', 0) }}</span>
         </a>
     </div>
 
     <!-- Notifications List -->
-    <div class="space-y-4">
-        {% if notifications %}
-            {% for notif in notifications %}
-            <div class="bg-gray-800 rounded-xl border border-gray-700 p-4 hover:border-gray-600 transition-colors">
-                <div class="flex items-start gap-4">
-                    <!-- App Badge -->
-                    <div class="flex-shrink-0">
-                        {% if 'whatsapp' in notif.source %}
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg" style="background-color: #25D366;">W</div>
-                        {% elif 'instagram' in notif.source %}
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg" style="background-color: #E4405F;">I</div>
-                        {% elif 'telegram' in notif.source %}
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg" style="background-color: #0088cc;">T</div>
-                        {% elif 'slack' in notif.source %}
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg" style="background-color: #4A154B;">S</div>
-                        {% elif 'discord' in notif.source %}
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg" style="background-color: #5865F2;">D</div>
-                        {% elif 'messenger' in notif.source %}
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg" style="background-color: #0084FF;">M</div>
-                        {% elif 'sms' in notif.source %}
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg bg-gray-500">📱</div>
-                        {% else %}
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg" style="background-color: #EA4335;">📧</div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Content -->
-                    <div class="flex-grow min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="font-medium text-gray-100">{{ notif.sender[:40] }}{% if notif.sender|length > 40 %}...{% endif %}</span>
-                            {% if notif.urgency == 'URGENT' %}
-                            <span class="px-2 py-0.5 bg-red-900 text-red-300 rounded text-xs font-medium">URGENT</span>
-                            {% endif %}
-                            {% if notif.sms_sent %}
-                            <span class="text-green-400 text-sm" title="SMS sent">✓ SMS</span>
-                            {% endif %}
-                        </div>
-                        <p class="text-gray-400 text-sm mb-2">{{ notif.subject }}</p>
-                        <p class="text-gray-300 text-sm">{{ notif.snippet[:150] }}{% if notif.snippet|length > 150 %}...{% endif %}</p>
-                    </div>
-                    
-                    <!-- Timestamp -->
-                    <div class="flex-shrink-0 text-right">
-                        <p class="text-gray-500 text-sm">{{ notif.created_at.strftime('%b %d') }}</p>
-                        <p class="text-gray-500 text-xs">{{ notif.created_at.strftime('%H:%M') }}</p>
-                    </div>
+    {% if notifications %}
+        {% for notif in notifications %}
+        <div class="notif-card">
+            {% if 'whatsapp' in notif.source %}
+            <div class="notif-badge" style="background: #25D366;">WA</div>
+            {% elif 'instagram' in notif.source %}
+            <div class="notif-badge" style="background: #E4405F;">IG</div>
+            {% elif 'telegram' in notif.source %}
+            <div class="notif-badge" style="background: #0088cc;">TG</div>
+            {% elif 'slack' in notif.source %}
+            <div class="notif-badge" style="background: #4A154B;">SL</div>
+            {% elif 'discord' in notif.source %}
+            <div class="notif-badge" style="background: #5865F2;">DC</div>
+            {% elif 'messenger' in notif.source %}
+            <div class="notif-badge" style="background: #0084FF;">FB</div>
+            {% elif 'sms' in notif.source %}
+            <div class="notif-badge" style="background: #6B7280;">SM</div>
+            {% else %}
+            <div class="notif-badge" style="background: #EA4335;">EM</div>
+            {% endif %}
+            <div class="notif-content">
+                <div class="notif-header">
+                    <span class="notif-sender">{{ notif.sender[:40] }}{% if notif.sender|length > 40 %}...{% endif %}</span>
+                    {% if notif.urgency == 'URGENT' %}
+                    <span class="notif-tag urgent">Urgent</span>
+                    {% endif %}
+                    {% if notif.sms_sent %}
+                    <span class="notif-tag sms">SMS Sent</span>
+                    {% endif %}
                 </div>
+                <div class="notif-subject">{{ notif.subject }}</div>
+                <div class="notif-preview">{{ notif.snippet[:150] }}{% if notif.snippet|length > 150 %}...{% endif %}</div>
             </div>
-            {% endfor %}
-        {% else %}
-            <div class="bg-gray-800 rounded-xl border border-gray-700 p-8 text-center">
-                <p class="text-gray-400">No notifications found{% if current_app != 'all' %} for {{ current_app }}{% endif %}.</p>
-                <p class="text-gray-500 text-sm mt-2">Notifications from your mobile app will appear here after syncing.</p>
+            <div class="notif-time">
+                <div class="notif-time-date">{{ notif.created_at.strftime('%b %d') }}</div>
+                <div class="notif-time-hour">{{ notif.created_at.strftime('%H:%M') }}</div>
             </div>
-        {% endif %}
-    </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <p>No notifications found{% if current_app != 'all' %} for {{ current_app }}{% endif %}.</p>
+            <p style="margin-top: 8px; font-size: 13px;">Notifications from your mobile app will appear here after syncing.</p>
+        </div>
+    {% endif %}
 
     <!-- Pagination -->
     {% if total > 20 %}
-    <div class="flex justify-center gap-2 mt-6">
+    <div class="pagination">
         {% if page > 1 %}
-        <a href="/notifications?app={{ current_app }}&page={{ page - 1 }}" 
-           class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
-            ← Previous
-        </a>
+        <a href="/notifications?app={{ current_app }}&page={{ page - 1 }}">Previous</a>
         {% endif %}
-        
-        <span class="px-4 py-2 text-gray-400">
-            Page {{ page }} of {{ ((total - 1) // 20) + 1 }}
-        </span>
-        
+        <span>Page {{ page }} of {{ ((total - 1) // 20) + 1 }}</span>
         {% if page * 20 < total %}
-        <a href="/notifications?app={{ current_app }}&page={{ page + 1 }}" 
-           class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
-            Next →
-        </a>
+        <a href="/notifications?app={{ current_app }}&page={{ page + 1 }}">Next</a>
         {% endif %}
     </div>
     {% endif %}
