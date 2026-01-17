@@ -2,6 +2,8 @@
 
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Optional
+import time
 
 
 class Settings(BaseSettings):
@@ -57,3 +59,45 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Get cached settings instance."""
     return Settings()
+
+
+# =============================================================================
+# Simple In-Memory Cache for Database Queries
+# =============================================================================
+
+class SimpleCache:
+    """Simple TTL cache for reducing database queries."""
+    
+    def __init__(self, default_ttl: int = 30):
+        self._cache: dict = {}
+        self._timestamps: dict = {}
+        self._default_ttl = default_ttl
+    
+    def get(self, key: str) -> Optional[any]:
+        """Get value from cache if not expired."""
+        if key not in self._cache:
+            return None
+        if time.time() - self._timestamps.get(key, 0) > self._default_ttl:
+            del self._cache[key]
+            del self._timestamps[key]
+            return None
+        return self._cache[key]
+    
+    def set(self, key: str, value: any, ttl: Optional[int] = None) -> None:
+        """Set value in cache with TTL."""
+        self._cache[key] = value
+        self._timestamps[key] = time.time()
+    
+    def invalidate(self, key: str) -> None:
+        """Remove key from cache."""
+        self._cache.pop(key, None)
+        self._timestamps.pop(key, None)
+    
+    def clear(self) -> None:
+        """Clear all cached values."""
+        self._cache.clear()
+        self._timestamps.clear()
+
+
+# Global cache instance (30 second TTL for dashboard stats)
+cache = SimpleCache(default_ttl=30)

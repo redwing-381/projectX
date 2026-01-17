@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 from src.api.deps import get_db_optional
 from src.db import crud
+from src.config import cache
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -43,6 +44,7 @@ async def add_vip_sender(
     if db is not None:
         try:
             crud.add_vip_sender(db, email)
+            cache.invalidate("vip_senders")  # Invalidate cache
         except IntegrityError:
             db.rollback()
             logger.info(f"VIP sender already exists: {email}")
@@ -58,6 +60,7 @@ async def delete_vip_sender(id: int, db: Session | None = Depends(get_db_optiona
     if db is not None:
         try:
             crud.remove_vip_sender(db, id)
+            cache.invalidate("vip_senders")  # Invalidate cache
         except Exception as e:
             logger.error(f"Could not delete VIP sender: {e}")
     

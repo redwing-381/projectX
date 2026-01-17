@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 from src.api.deps import get_db_optional
 from src.db import crud
+from src.config import cache
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -43,6 +44,7 @@ async def add_keyword(
     if db is not None:
         try:
             crud.add_keyword(db, keyword)
+            cache.invalidate("keywords")  # Invalidate cache
         except IntegrityError:
             db.rollback()
             logger.info(f"Keyword already exists: {keyword}")
@@ -58,6 +60,7 @@ async def delete_keyword(id: int, db: Session | None = Depends(get_db_optional))
     if db is not None:
         try:
             crud.remove_keyword(db, id)
+            cache.invalidate("keywords")  # Invalidate cache
         except Exception as e:
             logger.error(f"Could not delete keyword: {e}")
     

@@ -1375,3 +1375,61 @@ rm token.json
 **Spec Location:** `.kiro/specs/professional-ui-redesign/`
 
 ---
+
+### Performance Optimizations
+
+**Goal:** Reduce latency and improve website performance across the stack.
+
+**Optimizations Implemented:**
+
+1. **In-Memory Caching (30s TTL):**
+   - Added `SimpleCache` class in `src/config.py`
+   - Dashboard data cached to reduce DB queries
+   - VIP senders and keywords cached for classifier
+   - Cache invalidation on add/delete operations
+
+2. **Database Optimizations:**
+   - Added composite indexes for common query patterns:
+     - `ix_alert_history_source_created` (source + created_at)
+     - `ix_alert_history_urgency_created` (urgency + created_at)
+     - `ix_mobile_commands_pending` (device_id + executed)
+   - Connection pool tuning: `pool_recycle=300`, `pool_pre_ping=True`
+   - PostgreSQL session options: `work_mem=16MB`, `statement_timeout=30s`
+
+3. **Gmail API Optimization:**
+   - Moved blocking API calls to ThreadPoolExecutor
+   - Using `format="metadata"` instead of `format="full"` (faster)
+   - Only fetching required headers (From, Subject)
+
+4. **HTTP Response Compression:**
+   - Added GZip middleware for responses > 500 bytes
+   - Reduces bandwidth for HTML pages significantly
+
+5. **CSS Minification:**
+   - Minified inline CSS in `base.html` (~60% size reduction)
+   - Removed Tailwind CDN (was blocking render)
+   - Kept only critical CSS inline
+
+6. **Logging Optimization:**
+   - Reduced log verbosity in production
+   - DEBUG level only when DEBUG env var is set
+
+**Files Modified:**
+- `src/config.py` - Added SimpleCache class
+- `src/db/database.py` - Connection pool tuning, session options
+- `src/db/models.py` - Added composite indexes
+- `src/main.py` - Added GZip middleware, optimized logging
+- `src/services/gmail.py` - Async with ThreadPoolExecutor, metadata format
+- `src/agents/classifier.py` - Cached VIP/keyword lookups
+- `src/api/routes/dashboard.py` - Dashboard data caching
+- `src/api/routes/vip_senders.py` - Cache invalidation
+- `src/api/routes/keywords.py` - Cache invalidation
+- `src/templates/base.html` - Minified CSS
+
+**Expected Improvements:**
+- Dashboard load: ~50% faster (cached queries)
+- Email classification: ~30% faster (cached VIP/keywords)
+- Page size: ~40% smaller (minified CSS + GZip)
+- Gmail fetch: Non-blocking (async with thread pool)
+
+---

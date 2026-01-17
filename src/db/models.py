@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Index
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -23,6 +23,12 @@ class AlertHistory(Base):
     sms_sent = Column(Boolean, default=False)
     source = Column(String(20), default="email")  # email or telegram
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    
+    # Composite indexes for common query patterns
+    __table_args__ = (
+        Index('ix_alert_history_source_created', 'source', 'created_at'),
+        Index('ix_alert_history_urgency_created', 'urgency', 'created_at'),
+    )
     
     def __repr__(self):
         return f"<AlertHistory {self.email_id}: {self.urgency} ({self.source})>"
@@ -97,6 +103,11 @@ class MobileCommand(Base):
     executed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     executed_at = Column(DateTime, nullable=True)
+    
+    # Index for polling pending commands
+    __table_args__ = (
+        Index('ix_mobile_commands_pending', 'device_id', 'executed'),
+    )
     
     def __repr__(self):
         return f"<MobileCommand {self.command} for {self.device_id or 'all'}>"

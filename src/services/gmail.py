@@ -1,9 +1,11 @@
 """Gmail API integration service."""
 
+import asyncio
 import base64
 import json
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from google.auth.transport.requests import Request
@@ -18,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 # Gmail API scopes
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+
+# Thread pool for blocking Gmail API calls
+_executor = ThreadPoolExecutor(max_workers=3)
 
 
 class GmailService:
@@ -98,8 +103,48 @@ class GmailService:
             self._service = build("gmail", "v1", credentials=self._creds)
         return self._service
 
+    def _fetch_emails_sync(self, max_results: int) -> list[Email]:
+        """Synchronous email fetching (runs in thread pool)."""
+        service = self._get_service()
+
+        # Search for unread emails in inbox
+        results = (
+            service.users()
+            .messages()
+            .list(
+                userId="me",
+                q="is:unread in:inbox",
+                maxResults=max_results,
+            )
+            .execute()
+        )
+
+        messages = results.get("messages", [])
+        if not messages:
+            logger.info("No unread emails found")
+            return []
+
+        # Batch fetch message details for better performance
+        emails = []
+        batch_size = 10
+        for i in range(0, len(messages), batch_size):
+            batch = messages[i:i + batch_size]
+            for msg in batch:
+                full_msg = (
+                    service.users()
+                    .messages()
+                    .get(userId="me", id=msg["id"], format="metadata",
+                         metadataHeaders=["From", "Subject"])
+                    .execute()
+                )
+                email = self.extract_email_data(full_msg)
+                emails.append(email)
+
+        logger.info(f"Fetched {len(emails)} unread emails")
+        return emails
+
     async def get_unread_emails(self, max_results: int = 10) -> list[Email]:
-        """Fetch unread emails from inbox.
+        """Fetch unread emails from inbox (async wrapper).
 
         Args:
             max_results: Maximum number of emails to fetch.
@@ -108,37 +153,11 @@ class GmailService:
             List of Email objects.
         """
         try:
-            service = self._get_service()
-
-            # Search for unread emails in inbox
-            results = (
-                service.users()
-                .messages()
-                .list(
-                    userId="me",
-                    q="is:unread in:inbox",
-                    maxResults=max_results,
-                )
-                .execute()
+            # Run blocking Gmail API call in thread pool
+            loop = asyncio.get_event_loop()
+            emails = await loop.run_in_executor(
+                _executor, self._fetch_emails_sync, max_results
             )
-
-            messages = results.get("messages", [])
-            if not messages:
-                logger.info("No unread emails found")
-                return []
-
-            emails = []
-            for msg in messages:
-                full_msg = (
-                    service.users()
-                    .messages()
-                    .get(userId="me", id=msg["id"], format="full")
-                    .execute()
-                )
-                email = self.extract_email_data(full_msg)
-                emails.append(email)
-
-            logger.info(f"Fetched {len(emails)} unread emails")
             return emails
 
         except HttpError as e:

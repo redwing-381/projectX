@@ -5,7 +5,7 @@ from contextlib import contextmanager
 
 from typing import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 
@@ -25,18 +25,35 @@ def get_database_url() -> str:
     return url
 
 
-# Create engine with connection pooling
+# Create engine with optimized connection pooling
 DATABASE_URL = get_database_url()
 
 if DATABASE_URL:
     engine = create_engine(
         DATABASE_URL,
         poolclass=QueuePool,
-        pool_size=5,
-        max_overflow=10,
-        pool_pre_ping=True,  # Verify connections before use
+        pool_size=5,           # Base pool size
+        max_overflow=10,       # Extra connections when needed
+        pool_pre_ping=True,    # Verify connections before use
+        pool_recycle=300,      # Recycle connections after 5 minutes
+        echo=False,            # Disable SQL logging for performance
+        connect_args={
+            "connect_timeout": 10,  # Connection timeout
+            "options": "-c statement_timeout=30000"  # 30s query timeout
+        } if "postgresql" in DATABASE_URL else {}
     )
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    
+    # Set session-level optimizations
+    @event.listens_for(engine, "connect")
+    def set_pg_options(dbapi_conn, connection_record):
+        """Set PostgreSQL session options for performance."""
+        try:
+            cursor = dbapi_conn.cursor()
+            cursor.execute("SET work_mem = '16MB'")  # More memory for sorts
+            cursor.close()
+        except Exception:
+            pass  # Ignore if not PostgreSQL
 else:
     engine = None
     SessionLocal = None

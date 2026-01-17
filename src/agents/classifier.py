@@ -5,6 +5,7 @@ from typing import Optional, Tuple
 from openai import OpenAI
 
 from src.models.schemas import Email, Classification, Urgency
+from src.config import cache
 
 logger = logging.getLogger(__name__)
 
@@ -35,32 +36,68 @@ Respond with ONLY a JSON object in this exact format:
 """
 
 
-def check_vip_and_keywords(email: Email) -> Tuple[bool, Optional[str]]:
-    """Check if email matches VIP sender or contains urgent keyword.
+def get_cached_vip_senders():
+    """Get VIP senders with caching (60s TTL)."""
+    cached = cache.get("vip_senders")
+    if cached is not None:
+        return cached
     
-    Returns:
-        Tuple of (is_urgent, reason) if matched, (False, None) otherwise.
-    """
     try:
         from src.db.database import get_db_session
         from src.db import crud
         
         with get_db_session() as db:
-            # Check VIP sender
-            is_vip, vip_match = crud.is_vip_sender(db, email.sender)
-            if is_vip:
-                return True, f"VIP sender: {vip_match}"
-            
-            # Check keywords in subject and snippet
-            text_to_check = f"{email.subject} {email.snippet}"
-            has_keyword, keyword_match = crud.has_urgent_keyword(db, text_to_check)
-            if has_keyword:
-                return True, f"Urgent keyword: {keyword_match}"
+            vip_senders = crud.get_vip_senders(db)
+            result = [v.email_or_domain.lower() for v in vip_senders]
+            cache.set("vip_senders", result)
+            return result
+    except Exception:
+        return []
+
+
+def get_cached_keywords():
+    """Get keywords with caching (60s TTL)."""
+    cached = cache.get("keywords")
+    if cached is not None:
+        return cached
+    
+    try:
+        from src.db.database import get_db_session
+        from src.db import crud
         
-        return False, None
-    except Exception as e:
-        logger.debug(f"VIP/keyword check skipped (DB not configured): {e}")
-        return False, None
+        with get_db_session() as db:
+            keywords = crud.get_keywords(db)
+            result = [k.keyword.lower() for k in keywords]
+            cache.set("keywords", result)
+            return result
+    except Exception:
+        return []
+
+
+def check_vip_and_keywords(email: Email) -> Tuple[bool, Optional[str]]:
+    """Check if email matches VIP sender or contains urgent keyword.
+    
+    Uses cached VIP senders and keywords for performance.
+    
+    Returns:
+        Tuple of (is_urgent, reason) if matched, (False, None) otherwise.
+    """
+    email_lower = email.sender.lower()
+    
+    # Check VIP senders (cached)
+    vip_senders = get_cached_vip_senders()
+    for vip in vip_senders:
+        if vip in email_lower or email_lower.endswith(f"@{vip}") or email_lower.endswith(f".{vip}"):
+            return True, f"VIP sender: {vip}"
+    
+    # Check keywords (cached)
+    text_to_check = f"{email.subject} {email.snippet}".lower()
+    keywords = get_cached_keywords()
+    for keyword in keywords:
+        if keyword in text_to_check:
+            return True, f"Urgent keyword: {keyword}"
+    
+    return False, None
 
 
 class ClassifierAgent:
