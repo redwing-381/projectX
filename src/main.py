@@ -10,9 +10,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from src.config import get_settings
-from src.api.web import router as web_router
-from src.api.telegram import router as telegram_router
-from src.models.schemas import HealthResponse, CheckResponse, PipelineResult, TelegramMessage
+from src.api.routes import router as web_router
+from src.models.schemas import HealthResponse, CheckResponse, PipelineResult
 
 # Configure logging
 logging.basicConfig(
@@ -24,8 +23,6 @@ logger = logging.getLogger(__name__)
 # Global pipeline instance
 pipeline = None
 startup_error = None
-telegram_userbot = None
-telegram_userbot_task = None
 monitoring_task = None
 monitoring_running = False
 
@@ -69,7 +66,7 @@ def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
-    global pipeline, startup_error, telegram_userbot, telegram_userbot_task, monitoring_task, monitoring_running
+    global pipeline, startup_error, monitoring_task, monitoring_running
 
     try:
         settings = get_settings()
@@ -136,17 +133,6 @@ async def lifespan(app: FastAPI):
         monitoring_task = asyncio.create_task(scheduled_monitoring_loop())
         logger.info("Scheduled monitoring task started")
 
-        # Start Telegram userbot if configured
-        if settings.telegram_api_id and settings.telegram_api_hash and settings.telegram_session:
-            try:
-                telegram_userbot, telegram_userbot_task = await start_telegram_userbot(
-                    settings, twilio
-                )
-            except Exception as tg_error:
-                logger.error(f"Telegram userbot failed to start: {tg_error}")
-        else:
-            logger.info("Telegram userbot not configured (missing API credentials)")
-
     except Exception as e:
         startup_error = str(e)
         logger.error(f"Failed to initialize services: {e}")
@@ -166,9 +152,6 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
         logger.info("Monitoring task stopped")
-    if telegram_userbot:
-        await telegram_userbot.stop()
-        logger.info("Telegram userbot stopped")
 
 
 async def scheduled_monitoring_loop():
@@ -218,86 +201,6 @@ async def scheduled_monitoring_loop():
             await asyncio.sleep(60)
 
 
-async def start_telegram_userbot(settings, twilio):
-    """Start the Telegram userbot for monitoring personal messages."""
-    from src.services.telegram_userbot import TelegramUserbot
-    from src.agents.telegram_crew import TelegramProcessingCrew
-    from src.db.database import get_db_session
-    from src.db import crud
-    
-    # Initialize Telegram processing crew
-    telegram_crew = TelegramProcessingCrew(verbose=settings.crewai_verbose)
-    
-    async def on_telegram_message(message: TelegramMessage, chat_name: str):
-        """Callback when a Telegram message is received."""
-        try:
-            logger.info(f"Processing Telegram message from {message.sender}")
-            
-            # Classify the message
-            classification = telegram_crew.process_message(message)
-            
-            logger.info(f"Classification: {classification.urgency} - {classification.reason}")
-            
-            # Save to database
-            try:
-                with get_db_session() as db:
-                    crud.create_alert(
-                        db=db,
-                        sender=message.sender or message.sender_username or "Unknown",
-                        subject=f"Telegram: {chat_name}",
-                        urgency=classification.urgency,
-                        reason=classification.reason,
-                        sms_sent=False,
-                        source="telegram",
-                    )
-            except Exception as db_error:
-                logger.warning(f"Failed to save to database: {db_error}")
-            
-            # Send SMS if urgent
-            if classification.urgency == "URGENT":
-                sms_text = classification.sms_message or f"TG: {message.sender} - {message.text[:100]}"
-                try:
-                    sent = twilio.send_sms(
-                        to_number=settings.alert_phone_number,
-                        message=sms_text,
-                    )
-                    if sent:
-                        logger.info(f"SMS sent for urgent Telegram message")
-                        # Update database record
-                        try:
-                            with get_db_session() as db:
-                                # Get the latest alert and update sms_sent
-                                latest = crud.get_recent_alerts(db, limit=1)
-                                if latest:
-                                    latest[0].sms_sent = True
-                                    db.commit()
-                        except Exception:
-                            pass
-                    else:
-                        logger.warning("SMS send returned False")
-                except Exception as sms_error:
-                    logger.error(f"Failed to send SMS: {sms_error}")
-                    
-        except Exception as e:
-            logger.error(f"Error processing Telegram message: {e}")
-    
-    # Create and start userbot
-    userbot = TelegramUserbot(
-        api_id=settings.telegram_api_id,
-        api_hash=settings.telegram_api_hash,
-        session_string=settings.telegram_session,
-        on_message=on_telegram_message,
-    )
-    
-    await userbot.start()
-    logger.info("Telegram userbot started - monitoring all incoming messages")
-    
-    # Run userbot in background task
-    task = asyncio.create_task(userbot.run_forever())
-    
-    return userbot, task
-
-
 app = FastAPI(
     title="ProjectX",
     description="Smart notification bridge - monitors email, detects urgency with AI, sends SMS alerts",
@@ -307,9 +210,6 @@ app = FastAPI(
 
 # Include web dashboard routes
 app.include_router(web_router)
-
-# Include Telegram webhook routes
-app.include_router(telegram_router)
 
 
 @app.get("/health", response_model=HealthResponse)

@@ -1072,3 +1072,165 @@ mobile-app/
 - Battery-optimized with WorkManager
 
 ---
+
+### UI Overhaul & Mobile Integration - Complete
+
+**Goal:** Modernize the web dashboard, remove deprecated Telegram userbot, and integrate mobile app notifications with proper visualization.
+
+**Changes Completed:**
+
+1. **Telegram Userbot Removal:**
+   - Deleted `src/services/telegram_userbot.py`, `src/services/telegram.py`, `src/api/telegram.py`
+   - Deleted `src/agents/telegram_crew.py`, `scripts/generate_telegram_session.py`
+   - Removed Telegram config from `src/config.py` and `.env.example`
+   - Removed Telegram initialization from `src/main.py`
+   - Historical Telegram data (source="telegram") preserved in database
+
+2. **Database Schema Updates:**
+   - Added `MobileDevice` model for tracking connected Android devices
+   - Added CRUD functions: `get_or_create_device`, `update_device_sync`, `get_all_devices`
+   - Added notification query functions: `get_notifications_by_source`, `get_notification_counts_by_source`
+
+3. **Mobile Notification Agent:**
+   - Created `src/agents/mobile_notification_agent.py`
+   - Implements VIP → Keywords → LLM classification pipeline
+   - Formats SMS with app prefix (e.g., "WhatsApp: sender - message")
+
+4. **New Notifications Page (`/notifications`):**
+   - Filter tabs for each app (All, WhatsApp, Instagram, Telegram, Slack, Discord, SMS, Messenger, Email)
+   - Count badges on each tab
+   - Notification cards with app badge, sender, preview, urgency, timestamp
+   - Pagination controls (20 per page)
+
+5. **New Architecture Page (`/architecture`):**
+   - Mermaid.js diagram showing data flow
+   - Component descriptions (Data Sources, Classification Pipeline, Database, Output)
+   - Real-time status indicators (Server, Database, Mobile Devices, Last Sync)
+   - Supported apps display with brand colors
+
+6. **Updated Dashboard:**
+   - Removed Telegram status card
+   - Added Mobile App Sync card (device count, last sync time)
+   - Added notification breakdown by source with colored badges
+   - Updated recent alerts table with app-specific badges
+
+7. **Updated Settings Page:**
+   - Removed Telegram Monitoring section
+   - Added Mobile App Integration section:
+     - Connected devices count
+     - Total mobile notifications
+     - Last sync time
+     - Device list with sync stats
+     - API key status indicator
+
+8. **Navigation Updates:**
+   - Added Notifications and Architecture links
+   - Menu order: Dashboard, Notifications, History, VIP Senders, Keywords, Architecture, Settings
+   - Responsive mobile hamburger menu
+   - Version number in footer
+
+**App Badge Colors:**
+- WhatsApp: #25D366 (green)
+- Instagram: #E4405F (pink)
+- Telegram: #0088cc (blue)
+- Slack: #4A154B (purple)
+- Discord: #5865F2 (indigo)
+- Messenger: #0084FF (blue)
+- SMS: #6B7280 (gray)
+- Email: #EA4335 (red)
+
+**Files Created:**
+- `src/templates/notifications.html`
+- `src/templates/architecture.html`
+- `src/agents/mobile_notification_agent.py`
+
+**Files Modified:**
+- `src/api/web.py` - Added routes for notifications, architecture; updated dashboard and settings
+- `src/templates/base.html` - Updated navigation
+- `src/templates/dashboard.html` - Removed Telegram, added Mobile App Sync
+- `src/templates/settings.html` - Removed Telegram, added Mobile App section
+- `src/db/crud.py` - Added mobile device and notification query functions
+- `src/db/models.py` - Added MobileDevice model
+
+**Spec Location:** `.kiro/specs/ui-overhaul-mobile-integration/`
+
+---
+
+### Codebase Modularization - Industry Standard Architecture
+
+**Goal:** Refactor the monolithic `src/api/web.py` (700+ lines) into a modular, maintainable architecture following industry best practices.
+
+**Problem:**
+- Single 700+ line file with all routes mixed together
+- Repeated database session handling pattern (try/finally with SessionLocal)
+- Pydantic models defined inline instead of in schemas
+- Mixed concerns (web pages, API endpoints, mobile API all in one file)
+- No dependency injection pattern
+
+**Solution - Modular Route Architecture:**
+
+```
+src/api/
+├── __init__.py
+├── deps.py              # Shared dependencies (db, auth)
+└── routes/
+    ├── __init__.py      # Router aggregation
+    ├── dashboard.py     # GET /, POST /web/check
+    ├── history.py       # GET /history
+    ├── settings.py      # GET /settings, POST /settings/*
+    ├── vip_senders.py   # GET/POST /vip-senders/*
+    ├── keywords.py      # GET/POST /keywords/*
+    ├── notifications.py # GET /notifications
+    ├── architecture.py  # GET /architecture
+    ├── mobile_api.py    # POST /api/notifications
+    └── monitoring_api.py # GET/POST /api/monitoring/*
+```
+
+**Key Changes:**
+
+1. **Dependencies Module (`src/api/deps.py`):**
+   - `get_db()` - Database session dependency with proper cleanup
+   - `get_db_optional()` - Returns None if DB unavailable (for graceful degradation)
+   - `verify_api_key()` - API key verification dependency
+   - `is_db_connected()` - Database connection check utility
+
+2. **Route Modules:**
+   - Each module under 100 lines
+   - Uses `Depends(get_db)` for database sessions
+   - Imports Pydantic models from `src/models/schemas.py`
+   - Clear separation of concerns
+
+3. **Schema Updates:**
+   - Moved `NotificationPayload`, `NotificationBatchRequest`, `NotificationBatchResponse` to `src/models/schemas.py`
+   - All API models now in one place
+
+4. **Steering Documentation Updated:**
+   - `.kiro/steering/structure.md` - New directory layout, module organization rules
+   - `.kiro/steering/tech.md` - Added modular architecture standards, file size limits
+
+**Benefits:**
+- Each route file is focused and maintainable (<100 lines)
+- Dependency injection eliminates repeated boilerplate
+- Clear separation between routes, services, and data access
+- Easier testing with injectable dependencies
+- New developers can quickly find relevant code
+
+**Files Created:**
+- `src/api/deps.py`
+- `src/api/routes/__init__.py`
+- `src/api/routes/dashboard.py`
+- `src/api/routes/history.py`
+- `src/api/routes/settings.py`
+- `src/api/routes/vip_senders.py`
+- `src/api/routes/keywords.py`
+- `src/api/routes/notifications.py`
+- `src/api/routes/architecture.py`
+- `src/api/routes/mobile_api.py`
+- `src/api/routes/monitoring_api.py`
+
+**Files Deleted:**
+- `src/api/web.py` (replaced by modular routes)
+
+**Spec Location:** `.kiro/specs/codebase-modularization/`
+
+---

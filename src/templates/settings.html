@@ -9,7 +9,7 @@
     <!-- Phone Number -->
     <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
         <h2 class="text-lg font-semibold mb-4">Alert Phone Number</h2>
-        <p class="text-gray-400 mb-4">SMS alerts will be sent to this number when urgent emails are detected.</p>
+        <p class="text-gray-400 mb-4">SMS alerts will be sent to this number when urgent messages are detected.</p>
         <div class="flex items-center gap-4">
             <div class="bg-gray-700 rounded-lg px-4 py-3 font-mono">
                 {{ phone_masked or 'Not configured' }}
@@ -20,67 +20,159 @@
 
     <!-- Scheduled Monitoring -->
     <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 class="text-lg font-semibold mb-4">Scheduled Email Monitoring</h2>
-        <p class="text-gray-400 mb-4">Automatically check emails at regular intervals.</p>
+        <h2 class="text-lg font-semibold mb-4">Unified Monitoring Control</h2>
+        <p class="text-gray-400 mb-4">Control monitoring across all platforms from one place.</p>
         
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <p class="text-gray-400">Scheduled monitoring is:</p>
-                <p class="text-2xl font-bold mt-2 {% if monitoring_enabled %}text-green-400{% else %}text-gray-400{% endif %}">
-                    {% if monitoring_enabled %}Enabled{% else %}Disabled{% endif %}
-                </p>
-                {% if monitoring_enabled %}
-                <p class="text-gray-500 text-sm mt-1">Checking every {{ check_interval }} minutes</p>
-                {% endif %}
-            </div>
-            <form action="/settings/toggle-scheduled-monitoring" method="post">
-                {% if monitoring_enabled %}
-                <button type="submit" class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-medium">
-                    ⏹️ Disable
-                </button>
-                {% else %}
+        <!-- Quick Actions: Start/Stop All -->
+        <div class="flex gap-4 mb-6">
+            <form action="/settings/start-all-monitoring" method="post">
                 <button type="submit" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium">
-                    ▶️ Enable
+                    ▶️ Start All Monitoring
                 </button>
-                {% endif %}
+            </form>
+            <form action="/settings/stop-all-monitoring" method="post">
+                <button type="submit" class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-medium">
+                    ⏹️ Stop All Monitoring
+                </button>
             </form>
         </div>
         
-        <div class="border-t border-gray-700 pt-4">
+        <!-- Email Monitoring Section -->
+        <div class="border-t border-gray-700 pt-4 mb-4">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="font-medium">📧 Email Monitoring</h3>
+                    <p class="text-gray-400 text-sm">Automatically check Gmail at regular intervals</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="px-3 py-1 rounded-lg text-sm font-medium {% if monitoring_enabled %}bg-green-900 text-green-300{% else %}bg-gray-700 text-gray-400{% endif %}">
+                        {% if monitoring_enabled %}Active{% else %}Inactive{% endif %}
+                    </span>
+                    <form action="/settings/toggle-scheduled-monitoring" method="post">
+                        {% if monitoring_enabled %}
+                        <button type="submit" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-medium text-sm">
+                            Stop
+                        </button>
+                        {% else %}
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium text-sm">
+                            Start
+                        </button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+            
             <form action="/settings/set-interval" method="post" class="flex items-center gap-4">
-                <label class="text-gray-400">Check interval:</label>
-                <select name="interval" class="bg-gray-700 rounded-lg px-4 py-2 text-white">
-                    <option value="1" {% if check_interval == 1 %}selected{% endif %}>1 minute</option>
-                    <option value="2" {% if check_interval == 2 %}selected{% endif %}>2 minutes</option>
-                    <option value="5" {% if check_interval == 5 %}selected{% endif %}>5 minutes</option>
-                    <option value="10" {% if check_interval == 10 %}selected{% endif %}>10 minutes</option>
-                    <option value="15" {% if check_interval == 15 %}selected{% endif %}>15 minutes</option>
-                    <option value="30" {% if check_interval == 30 %}selected{% endif %}>30 minutes</option>
-                    <option value="60" {% if check_interval == 60 %}selected{% endif %}>1 hour</option>
+                <label class="text-gray-400 text-sm">Check interval:</label>
+                <select name="interval" class="bg-gray-700 rounded-lg px-3 py-2 text-white text-sm">
+                    <option value="1" {% if check_interval == 1 %}selected{% endif %}>1 min</option>
+                    <option value="2" {% if check_interval == 2 %}selected{% endif %}>2 min</option>
+                    <option value="5" {% if check_interval == 5 %}selected{% endif %}>5 min</option>
+                    <option value="10" {% if check_interval == 10 %}selected{% endif %}>10 min</option>
+                    <option value="15" {% if check_interval == 15 %}selected{% endif %}>15 min</option>
+                    <option value="30" {% if check_interval == 30 %}selected{% endif %}>30 min</option>
                 </select>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-lg font-medium text-sm">
                     Save
                 </button>
             </form>
         </div>
+        
+        <!-- Mobile Monitoring Section -->
+        <div class="border-t border-gray-700 pt-4">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="font-medium">📱 Mobile App Monitoring</h3>
+                    <p class="text-gray-400 text-sm">Capture notifications from WhatsApp, Telegram, etc.</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="px-3 py-1 rounded-lg text-sm font-medium {% if mobile_monitoring_enabled %}bg-green-900 text-green-300{% else %}bg-gray-700 text-gray-400{% endif %}">
+                        {% if device_count > 0 %}{{ mobile_enabled_count }}/{{ device_count }} devices{% else %}No devices{% endif %}
+                    </span>
+                    {% if device_count > 0 %}
+                    <form action="/settings/toggle-mobile-monitoring" method="post">
+                        {% if mobile_monitoring_enabled %}
+                        <button type="submit" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-medium text-sm">
+                            Stop All
+                        </button>
+                        {% else %}
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium text-sm">
+                            Start All
+                        </button>
+                        {% endif %}
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Telegram Status -->
+    <!-- Mobile App -->
     <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 class="text-lg font-semibold mb-4">Telegram Monitoring</h2>
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-gray-400">Telegram userbot status:</p>
-                <p class="text-2xl font-bold mt-2 {% if telegram_connected %}text-green-400{% else %}text-gray-400{% endif %}">
-                    {% if telegram_connected %}Connected{% else %}Not Configured{% endif %}
+        <h2 class="text-lg font-semibold mb-4">Mobile App Integration</h2>
+        <p class="text-gray-400 mb-4">Connect your Android device to sync notifications from messaging apps.</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="bg-gray-700 rounded-lg p-4">
+                <p class="text-gray-400 text-sm">Connected Devices</p>
+                <p class="text-2xl font-bold mt-1 {% if device_count > 0 %}text-green-400{% else %}text-gray-400{% endif %}">
+                    {{ device_count }}
                 </p>
-                {% if telegram_connected %}
-                <p class="text-gray-500 text-sm mt-1">Monitoring all incoming messages</p>
-                {% else %}
-                <p class="text-gray-500 text-sm mt-1">Set TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_SESSION in .env</p>
-                {% endif %}
             </div>
-            <span class="text-4xl">{% if telegram_connected %}📱{% else %}📵{% endif %}</span>
+            <div class="bg-gray-700 rounded-lg p-4">
+                <p class="text-gray-400 text-sm">Mobile Notifications</p>
+                <p class="text-2xl font-bold mt-1">{{ mobile_notification_count }}</p>
+            </div>
+            <div class="bg-gray-700 rounded-lg p-4">
+                <p class="text-gray-400 text-sm">Last Sync</p>
+                <p class="text-2xl font-bold mt-1">
+                    {% if last_sync %}{{ last_sync.strftime('%H:%M') }}{% else %}Never{% endif %}
+                </p>
+            </div>
+        </div>
+
+        {% if devices %}
+        <div class="border-t border-gray-700 pt-4">
+            <h3 class="text-sm font-medium text-gray-400 mb-3">Connected Devices</h3>
+            <div class="space-y-2">
+                {% for device in devices %}
+                <div class="flex items-center justify-between bg-gray-700 rounded-lg px-4 py-3">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">📱</span>
+                        <div>
+                            <p class="font-medium">{{ device.device_name or device.device_id[:12] }}...</p>
+                            <p class="text-gray-400 text-sm">{{ device.notification_count }} notifications synced</p>
+                        </div>
+                    </div>
+                    <div class="text-right text-sm text-gray-400">
+                        <p>Last sync</p>
+                        <p>{{ device.last_sync_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="border-t border-gray-700 pt-4">
+            <div class="text-center py-6">
+                <span class="text-4xl">📱</span>
+                <p class="text-gray-400 mt-2">No devices connected yet</p>
+                <p class="text-gray-500 text-sm mt-1">Install the Android app and sync to get started</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- API Key Status -->
+        <div class="border-t border-gray-700 pt-4 mt-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400">API Key Status</p>
+                    <p class="text-sm text-gray-500 mt-1">Required for mobile app authentication</p>
+                </div>
+                <span class="px-3 py-1 rounded-lg text-sm font-medium {% if api_key_configured %}bg-green-900 text-green-300{% else %}bg-yellow-900 text-yellow-300{% endif %}">
+                    {% if api_key_configured %}Configured{% else %}Not Set{% endif %}
+                </span>
+            </div>
         </div>
     </div>
 
@@ -113,12 +205,6 @@
                 <p class="text-gray-400">Database</p>
                 <p class="font-medium {% if db_connected %}text-green-400{% else %}text-red-400{% endif %}">
                     {% if db_connected %}Connected{% else %}Not Connected{% endif %}
-                </p>
-            </div>
-            <div>
-                <p class="text-gray-400">Telegram</p>
-                <p class="font-medium {% if telegram_connected %}text-green-400{% else %}text-gray-400{% endif %}">
-                    {% if telegram_connected %}Connected{% else %}Not Configured{% endif %}
                 </p>
             </div>
             <div>

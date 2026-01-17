@@ -68,9 +68,11 @@ def help(
     table3 = Table(show_header=False, box=None, padding=(0, 2))
     table3.add_column("Command", style="cyan")
     table3.add_column("Description")
-    table3.add_row("projectx monitor status", "Show scheduled monitoring status")
-    table3.add_row("projectx monitor start", "Enable scheduled email monitoring")
-    table3.add_row("projectx monitor stop", "Disable scheduled email monitoring")
+    table3.add_row("projectx monitor status", "Show monitoring status (email + mobile)")
+    table3.add_row("projectx monitor start", "Enable email monitoring")
+    table3.add_row("projectx monitor start --all", "Enable ALL monitoring (email + mobile)")
+    table3.add_row("projectx monitor stop", "Disable email monitoring")
+    table3.add_row("projectx monitor stop --all", "Disable ALL monitoring (email + mobile)")
     table3.add_row("projectx monitor set-interval <min>", "Set check interval (1-1440 minutes)")
     console.print(table3)
     
@@ -343,10 +345,54 @@ def config_set_url(
 def monitor_status(
     json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON"),
 ):
-    """Show current monitoring status."""
+    """Show current monitoring status (email + mobile)."""
     client = get_client()
 
     try:
+        # Try unified status first
+        try:
+            result = client._get("/api/monitoring/unified")
+            
+            if json_output:
+                console.print(json.dumps(result, indent=2))
+            else:
+                console.print("\n[bold]Unified Monitoring Status[/bold]")
+                
+                # Email monitoring
+                email = result.get("email_monitoring", {})
+                email_enabled = email.get("enabled", False)
+                email_running = email.get("running", False)
+                interval = email.get("interval_minutes", 5)
+                
+                console.print(f"\n[bold]📧 Email Monitoring[/bold]")
+                if email_enabled:
+                    console.print(f"  [green]✓[/green] Enabled (every {interval} min)")
+                    console.print(f"  Running: {'Yes' if email_running else 'No'}")
+                else:
+                    console.print(f"  [yellow]○[/yellow] Disabled")
+                
+                # Mobile monitoring
+                mobile = result.get("mobile_monitoring", {})
+                total = mobile.get("total_devices", 0)
+                enabled = mobile.get("enabled_devices", 0)
+                
+                console.print(f"\n[bold]📱 Mobile Monitoring[/bold]")
+                if total > 0:
+                    if enabled == total:
+                        console.print(f"  [green]✓[/green] All {total} devices enabled")
+                    elif enabled > 0:
+                        console.print(f"  [yellow]○[/yellow] {enabled}/{total} devices enabled")
+                    else:
+                        console.print(f"  [red]✗[/red] All {total} devices disabled")
+                else:
+                    console.print(f"  [dim]No devices connected[/dim]")
+                
+                console.print()
+            return
+        except Exception:
+            pass  # Fall back to basic status
+        
+        # Basic status fallback
         result = client._get("/api/monitoring")
 
         if json_output:
@@ -374,13 +420,17 @@ def monitor_status(
 
 @monitor_app.command("start")
 def monitor_start(
+    all_platforms: bool = typer.Option(False, "--all", "-a", help="Start monitoring on all platforms (email + mobile)"),
     json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON"),
 ):
     """Enable scheduled email monitoring."""
     client = get_client()
 
     try:
-        result = client._post("/api/monitoring/start")
+        if all_platforms:
+            result = client._post("/api/monitoring/start-all")
+        else:
+            result = client._post("/api/monitoring/start")
 
         if json_output:
             console.print(json.dumps(result, indent=2))
@@ -397,13 +447,17 @@ def monitor_start(
 
 @monitor_app.command("stop")
 def monitor_stop(
+    all_platforms: bool = typer.Option(False, "--all", "-a", help="Stop monitoring on all platforms (email + mobile)"),
     json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON"),
 ):
     """Disable scheduled email monitoring."""
     client = get_client()
 
     try:
-        result = client._post("/api/monitoring/stop")
+        if all_platforms:
+            result = client._post("/api/monitoring/stop-all")
+        else:
+            result = client._post("/api/monitoring/stop")
 
         if json_output:
             console.print(json.dumps(result, indent=2))

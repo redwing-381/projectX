@@ -269,3 +269,213 @@ def get_check_interval(db: Session) -> int:
 def set_check_interval(db: Session, minutes: int) -> None:
     """Set the email check interval in minutes."""
     set_setting(db, "check_interval_minutes", str(minutes))
+
+
+# =============================================================================
+# Mobile Device Operations
+# =============================================================================
+
+from src.db.models import MobileDevice
+
+
+def get_or_create_device(db: Session, device_id: str, device_name: Optional[str] = None) -> MobileDevice:
+    """Get existing device or create a new one."""
+    device = db.query(MobileDevice).filter(MobileDevice.device_id == device_id).first()
+    if device:
+        return device
+    
+    device = MobileDevice(
+        device_id=device_id,
+        device_name=device_name,
+        notification_count=0,
+    )
+    db.add(device)
+    db.commit()
+    db.refresh(device)
+    return device
+
+
+def update_device_sync(db: Session, device_id: str, notification_count: int) -> Optional[MobileDevice]:
+    """Update device sync timestamp and increment notification count."""
+    device = db.query(MobileDevice).filter(MobileDevice.device_id == device_id).first()
+    if device:
+        device.last_sync_at = datetime.utcnow()
+        device.notification_count += notification_count
+        db.commit()
+        db.refresh(device)
+    return device
+
+
+def get_all_devices(db: Session) -> List[MobileDevice]:
+    """Get all registered mobile devices."""
+    return db.query(MobileDevice).order_by(MobileDevice.last_sync_at.desc()).all()
+
+
+def get_device_count(db: Session) -> int:
+    """Get total count of registered devices."""
+    return db.query(func.count(MobileDevice.id)).scalar() or 0
+
+
+def get_total_mobile_notifications(db: Session) -> int:
+    """Get total notifications received from all mobile devices."""
+    return db.query(func.sum(MobileDevice.notification_count)).scalar() or 0
+
+
+def get_last_sync_time(db: Session) -> Optional[datetime]:
+    """Get the most recent sync time across all devices."""
+    device = db.query(MobileDevice).order_by(MobileDevice.last_sync_at.desc()).first()
+    return device.last_sync_at if device else None
+
+
+# =============================================================================
+# Notification Query Operations
+# =============================================================================
+
+def get_notifications_by_source(
+    db: Session,
+    source_prefix: str,
+    skip: int = 0,
+    limit: int = 20,
+) -> List[AlertHistory]:
+    """Get notifications filtered by source prefix (e.g., 'android:whatsapp')."""
+    query = db.query(AlertHistory)
+    
+    if source_prefix and source_prefix != "all":
+        query = query.filter(AlertHistory.source.like(f"{source_prefix}%"))
+    
+    return query.order_by(AlertHistory.created_at.desc()).offset(skip).limit(limit).all()
+
+
+def get_notification_count_by_source(db: Session, source_prefix: str) -> int:
+    """Get count of notifications for a specific source prefix."""
+    query = db.query(func.count(AlertHistory.id))
+    
+    if source_prefix and source_prefix != "all":
+        query = query.filter(AlertHistory.source.like(f"{source_prefix}%"))
+    
+    return query.scalar() or 0
+
+
+def get_notification_counts_by_source(db: Session) -> dict:
+    """Get notification counts grouped by source."""
+    # Get all unique sources and their counts
+    results = db.query(
+        AlertHistory.source,
+        func.count(AlertHistory.id)
+    ).group_by(AlertHistory.source).all()
+    
+    counts = {"all": 0}
+    for source, count in results:
+        counts[source] = count
+        counts["all"] += count
+        
+        # Also aggregate by app type (e.g., android:whatsapp -> whatsapp)
+        if source and ":" in source:
+            app_name = source.split(":")[-1]
+            if app_name not in counts:
+                counts[app_name] = 0
+            counts[app_name] += count
+    
+    return counts
+
+
+# =============================================================================
+# Mobile Command Operations (Cross-Platform Control)
+# =============================================================================
+
+from src.db.models import MobileCommand
+
+
+def queue_mobile_command(
+    db: Session,
+    command: str,
+    device_id: Optional[str] = None,
+    payload: Optional[str] = None,
+) -> MobileCommand:
+    """Queue a command for mobile device(s) to execute.
+    
+    Args:
+        db: Database session
+        command: Command name (start_monitoring, stop_monitoring)
+        device_id: Specific device ID, or None for all devices
+        payload: Optional JSON payload
+    """
+    cmd = MobileCommand(
+        device_id=device_id,
+        command=command,
+        payload=payload,
+        executed=False,
+    )
+    db.add(cmd)
+    db.commit()
+    db.refresh(cmd)
+    return cmd
+
+
+def get_pending_commands(db: Session, device_id: str) -> List[MobileCommand]:
+    """Get pending commands for a specific device."""
+    return db.query(MobileCommand).filter(
+        MobileCommand.executed == False,
+        or_(
+            MobileCommand.device_id == device_id,
+            MobileCommand.device_id == None,  # Commands for all devices
+        )
+    ).order_by(MobileCommand.created_at.asc()).all()
+
+
+def mark_command_executed(db: Session, command_id: int) -> bool:
+    """Mark a command as executed."""
+    cmd = db.query(MobileCommand).filter(MobileCommand.id == command_id).first()
+    if cmd:
+        cmd.executed = True
+        cmd.executed_at = datetime.utcnow()
+        db.commit()
+        return True
+    return False
+
+
+def set_device_monitoring(db: Session, device_id: str, enabled: bool) -> Optional[MobileDevice]:
+    """Set monitoring enabled/disabled for a specific device."""
+    device = db.query(MobileDevice).filter(MobileDevice.device_id == device_id).first()
+    if device:
+        device.monitoring_enabled = enabled
+        db.commit()
+        db.refresh(device)
+    return device
+
+
+def set_all_devices_monitoring(db: Session, enabled: bool) -> int:
+    """Set monitoring enabled/disabled for all devices. Returns count updated."""
+    count = db.query(MobileDevice).update({MobileDevice.monitoring_enabled: enabled})
+    db.commit()
+    return count
+
+
+def get_device_monitoring_status(db: Session, device_id: str) -> Optional[bool]:
+    """Get monitoring status for a specific device."""
+    device = db.query(MobileDevice).filter(MobileDevice.device_id == device_id).first()
+    return device.monitoring_enabled if device else None
+
+
+def get_global_monitoring_status(db: Session) -> dict:
+    """Get unified monitoring status across all platforms."""
+    email_enabled = get_monitoring_enabled(db)
+    email_interval = get_check_interval(db)
+    
+    # Get mobile device stats
+    devices = get_all_devices(db)
+    mobile_enabled_count = sum(1 for d in devices if getattr(d, 'monitoring_enabled', True))
+    total_devices = len(devices)
+    
+    return {
+        "email_monitoring": {
+            "enabled": email_enabled,
+            "interval_minutes": email_interval,
+        },
+        "mobile_monitoring": {
+            "total_devices": total_devices,
+            "enabled_devices": mobile_enabled_count,
+            "all_enabled": total_devices > 0 and mobile_enabled_count == total_devices,
+        },
+        "unified_enabled": email_enabled or (total_devices > 0 and mobile_enabled_count > 0),
+    }

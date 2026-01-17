@@ -7,7 +7,10 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from projectx_cli.config import load_config, get_server_url, set_server_url
+from projectx_cli.config import (
+    load_config, get_server_url, set_server_url,
+    get_api_key, set_api_key, is_logged_in
+)
 from projectx_cli.client import ProjectXClient, APIError, ConnectionError
 
 app = typer.Typer(
@@ -19,12 +22,15 @@ app = typer.Typer(
 config_app = typer.Typer(help="Manage CLI configuration")
 app.add_typer(config_app, name="config")
 
+monitor_app = typer.Typer(help="Control scheduled email monitoring")
+app.add_typer(monitor_app, name="monitor")
+
 console = Console()
 
 
 def get_client() -> ProjectXClient:
     """Get configured API client."""
-    return ProjectXClient(get_server_url())
+    return ProjectXClient(get_server_url(), get_api_key())
 
 
 def handle_error(e: Exception, json_output: bool = False) -> None:
@@ -41,6 +47,98 @@ def handle_error(e: Exception, json_output: bool = False) -> None:
     else:
         console.print(f"[red]✗[/red] {message}")
     raise typer.Exit(code=1)
+
+
+@app.command()
+def help():
+    """Show all available commands."""
+    console.print("\n[bold blue]ProjectX CLI[/bold blue] - Smart notification bridge\n")
+    
+    console.print("[bold]Authentication:[/bold]")
+    table0 = Table(show_header=False, box=None, padding=(0, 2))
+    table0.add_column("Command", style="cyan")
+    table0.add_column("Description")
+    table0.add_row("projectx login", "Authenticate with your API key")
+    table0.add_row("projectx logout", "Remove saved API key")
+    console.print(table0)
+    
+    console.print("\n[bold]Main Commands:[/bold]")
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column("Command", style="cyan")
+    table.add_column("Description")
+    table.add_row("projectx status", "Check server health and pipeline status")
+    table.add_row("projectx check", "Trigger email check and display results")
+    table.add_row("projectx test", "Test classification with sample urgent email")
+    console.print(table)
+    
+    console.print("\n[bold]Config Commands:[/bold]")
+    table2 = Table(show_header=False, box=None, padding=(0, 2))
+    table2.add_column("Command", style="cyan")
+    table2.add_column("Description")
+    table2.add_row("projectx config show", "Display current configuration")
+    table2.add_row("projectx config set-url <url>", "Set the server URL")
+    console.print(table2)
+    
+    console.print("\n[bold]Monitor Commands:[/bold]")
+    table3 = Table(show_header=False, box=None, padding=(0, 2))
+    table3.add_column("Command", style="cyan")
+    table3.add_column("Description")
+    table3.add_row("projectx monitor status", "Show scheduled monitoring status")
+    table3.add_row("projectx monitor start", "Enable scheduled email monitoring")
+    table3.add_row("projectx monitor stop", "Disable scheduled email monitoring")
+    table3.add_row("projectx monitor set-interval <min>", "Set check interval (1-1440 minutes)")
+    console.print(table3)
+    
+    console.print("\n[dim]All commands support --json / -j flag for machine-readable output[/dim]")
+    console.print()
+
+
+@app.command()
+def login():
+    """Authenticate with your API key."""
+    console.print("\n[bold]ProjectX Login[/bold]")
+    console.print("Enter your API key to authenticate with the server.")
+    console.print("[dim]You can find your API key in your server's environment variables (API_KEY)[/dim]\n")
+    
+    api_key = typer.prompt("API Key", hide_input=True)
+    
+    if not api_key or not api_key.strip():
+        console.print("[red]✗[/red] API key cannot be empty")
+        raise typer.Exit(code=1)
+    
+    client = ProjectXClient(get_server_url(), api_key.strip())
+    
+    try:
+        with console.status("[bold blue]Verifying API key...[/bold blue]"):
+            client.health()
+        
+        set_api_key(api_key.strip())
+        console.print(f"[green]✓[/green] Logged in successfully!")
+        console.print(f"  Server: {get_server_url()}")
+        console.print()
+        
+    except APIError as e:
+        if e.status_code in (401, 403):
+            console.print(f"[red]✗[/red] Invalid API key")
+        else:
+            console.print(f"[red]✗[/red] Server error: {e.message}")
+        raise typer.Exit(code=1)
+    except ConnectionError as e:
+        console.print(f"[red]✗[/red] Could not connect to server: {e.message}")
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def logout():
+    """Remove saved API key."""
+    if not is_logged_in():
+        console.print("\n[yellow]○[/yellow] Not logged in")
+        console.print()
+        return
+    
+    set_api_key("")
+    console.print("\n[green]✓[/green] Logged out successfully")
+    console.print()
 
 
 @app.command()
@@ -75,7 +173,6 @@ def status(json_output: bool = typer.Option(False, "--json", "-j", help="Output 
             console.print(f"  Error: {e}")
             console.print()
             raise typer.Exit(code=1)
-
 
 
 @app.command()
@@ -162,15 +259,21 @@ def test(json_output: bool = typer.Option(False, "--json", "-j", help="Output as
         handle_error(e, json_output)
 
 
+# Config subcommands
 @config_app.command("show")
 def config_show(json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON")):
     """Display current configuration."""
     config = load_config()
     if json_output:
-        console.print(config.model_dump_json(indent=2))
+        output = {"server_url": config.server_url, "logged_in": bool(config.api_key)}
+        console.print(json.dumps(output, indent=2))
     else:
         console.print("\n[bold]ProjectX Configuration[/bold]")
         console.print(f"  Server URL: {config.server_url}")
+        if config.api_key:
+            console.print(f"  Auth: [green]✓ Logged in[/green]")
+        else:
+            console.print(f"  Auth: [yellow]○ Not logged in[/yellow] (run 'projectx login')")
         console.print()
 
 
@@ -186,6 +289,112 @@ def config_set_url(
     else:
         console.print(f"\n[green]✓[/green] Server URL set to: {url}")
         console.print()
+
+
+# Monitor subcommands
+@monitor_app.command("status")
+def monitor_status(json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON")):
+    """Show current monitoring status."""
+    client = get_client()
+
+    try:
+        result = client._get("/api/monitoring")
+
+        if json_output:
+            console.print(json.dumps(result, indent=2))
+        else:
+            enabled = result.get("enabled", False)
+            running = result.get("running", False)
+            interval = result.get("interval_minutes", 5)
+
+            console.print("\n[bold]Scheduled Monitoring Status[/bold]")
+            
+            if enabled:
+                console.print(f"[green]✓[/green] Enabled")
+                console.print(f"  Interval: {interval} minutes")
+                console.print(f"  Running: {'Yes' if running else 'No'}")
+            else:
+                console.print(f"[yellow]○[/yellow] Disabled")
+                console.print(f"  Interval: {interval} minutes (when enabled)")
+            
+            console.print()
+
+    except (ConnectionError, APIError) as e:
+        handle_error(e, json_output)
+
+
+@monitor_app.command("start")
+def monitor_start(json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON")):
+    """Enable scheduled email monitoring."""
+    client = get_client()
+
+    try:
+        result = client._post("/api/monitoring/start")
+
+        if json_output:
+            console.print(json.dumps(result, indent=2))
+        else:
+            if result.get("success"):
+                console.print(f"\n[green]✓[/green] {result.get('message', 'Monitoring enabled')}")
+            else:
+                console.print(f"\n[red]✗[/red] {result.get('error', 'Failed to enable monitoring')}")
+            console.print()
+
+    except (ConnectionError, APIError) as e:
+        handle_error(e, json_output)
+
+
+@monitor_app.command("stop")
+def monitor_stop(json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON")):
+    """Disable scheduled email monitoring."""
+    client = get_client()
+
+    try:
+        result = client._post("/api/monitoring/stop")
+
+        if json_output:
+            console.print(json.dumps(result, indent=2))
+        else:
+            if result.get("success"):
+                console.print(f"\n[green]✓[/green] {result.get('message', 'Monitoring disabled')}")
+            else:
+                console.print(f"\n[red]✗[/red] {result.get('error', 'Failed to disable monitoring')}")
+            console.print()
+
+    except (ConnectionError, APIError) as e:
+        handle_error(e, json_output)
+
+
+@monitor_app.command("set-interval")
+def monitor_set_interval(
+    minutes: int = typer.Argument(..., help="Check interval in minutes (1-1440)"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON"),
+):
+    """Set the email check interval."""
+    if minutes < 1 or minutes > 1440:
+        if json_output:
+            console.print(json.dumps({"success": False, "error": "Interval must be between 1 and 1440 minutes"}))
+        else:
+            console.print(f"\n[red]✗[/red] Interval must be between 1 and 1440 minutes")
+            console.print()
+        raise typer.Exit(code=1)
+
+    client = get_client()
+
+    try:
+        result = client._post("/api/monitoring/interval", data={"minutes": minutes})
+
+        if json_output:
+            console.print(json.dumps(result, indent=2))
+        else:
+            if result.get("success"):
+                console.print(f"\n[green]✓[/green] {result.get('message', f'Interval set to {minutes} minutes')}")
+            else:
+                console.print(f"\n[red]✗[/red] {result.get('error', 'Failed to set interval')}")
+            console.print()
+
+    except (ConnectionError, APIError) as e:
+        handle_error(e, json_output)
 
 
 if __name__ == "__main__":

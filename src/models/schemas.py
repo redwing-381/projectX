@@ -75,3 +75,35 @@ class CheckResponse(BaseModel):
     success: bool
     message: str
     data: PipelineResult | None = None
+
+
+# =============================================================================
+# Mobile App API Models
+# =============================================================================
+
+class NotificationPayload(BaseModel):
+    """Individual notification from mobile app."""
+
+    id: str = Field(..., description="Unique notification ID")
+    app: str = Field(..., description="Source app name (e.g., WhatsApp)")
+    sender: str = Field(..., description="Sender name or identifier")
+    text: str = Field(..., description="Notification text content")
+    timestamp: int = Field(..., description="Unix timestamp in milliseconds")
+
+
+class NotificationBatchRequest(BaseModel):
+    """Batch of notifications from mobile app."""
+
+    device_id: str = Field(..., description="Unique device identifier")
+    notifications: list[NotificationPayload] = Field(
+        default_factory=list, description="List of notifications to process"
+    )
+
+
+class NotificationBatchResponse(BaseModel):
+    """Response after processing notifications."""
+
+    success: bool = Field(..., description="Whether processing succeeded")
+    processed: int = Field(0, description="Number of notifications processed")
+    urgent_count: int = Field(0, description="Number of urgent notifications")
+    message: str = Field("", description="Status message")

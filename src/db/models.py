@@ -66,3 +66,37 @@ class Settings(Base):
     
     def __repr__(self):
         return f"<Settings {self.key}={self.value}>"
+
+
+class MobileDevice(Base):
+    """Mobile device that syncs notifications to the backend."""
+    
+    __tablename__ = "mobile_devices"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(String(255), unique=True, index=True)
+    device_name = Column(String(255), nullable=True)
+    last_sync_at = Column(DateTime, default=datetime.utcnow)
+    notification_count = Column(Integer, default=0)
+    monitoring_enabled = Column(Boolean, default=True)  # Can be controlled remotely
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<MobileDevice {self.device_id}: {self.notification_count} notifications>"
+
+
+class MobileCommand(Base):
+    """Commands queued for mobile devices to poll."""
+    
+    __tablename__ = "mobile_commands"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(String(255), index=True)  # NULL = all devices
+    command = Column(String(50))  # start_monitoring, stop_monitoring
+    payload = Column(Text, nullable=True)  # JSON payload if needed
+    executed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    executed_at = Column(DateTime, nullable=True)
+    
+    def __repr__(self):
+        return f"<MobileCommand {self.command} for {self.device_id or 'all'}>"

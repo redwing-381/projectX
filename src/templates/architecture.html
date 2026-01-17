@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Architecture - ProjectX{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header -->
+    <div>
+        <h1 class="text-3xl font-bold">System Architecture</h1>
+        <p class="text-gray-400 mt-2">How ProjectX processes notifications and delivers alerts</p>
+    </div>
+
+    <!-- Status Indicators -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <div class="flex items-center gap-3">
+                <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                <span class="text-gray-400">Server</span>
+            </div>
+            <p class="text-lg font-semibold mt-1 text-green-400">Online</p>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <div class="flex items-center gap-3">
+                <span class="w-3 h-3 rounded-full {% if db_connected %}bg-green-500{% else %}bg-red-500{% endif %}"></span>
+                <span class="text-gray-400">Database</span>
+            </div>
+            <p class="text-lg font-semibold mt-1 {% if db_connected %}text-green-400{% else %}text-red-400{% endif %}">
+                {% if db_connected %}Connected{% else %}Disconnected{% endif %}
+            </p>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <div class="flex items-center gap-3">
+                <span class="w-3 h-3 rounded-full {% if device_count > 0 %}bg-green-500{% else %}bg-gray-500{% endif %}"></span>
+                <span class="text-gray-400">Mobile Devices</span>
+            </div>
+            <p class="text-lg font-semibold mt-1">{{ device_count }} connected</p>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <div class="flex items-center gap-3">
+                <span class="w-3 h-3 rounded-full {% if last_sync %}bg-green-500{% else %}bg-gray-500{% endif %}"></span>
+                <span class="text-gray-400">Last Sync</span>
+            </div>
+            <p class="text-lg font-semibold mt-1">
+                {% if last_sync %}{{ last_sync.strftime('%H:%M') }}{% else %}Never{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Architecture Diagram -->
+    <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <h2 class="text-xl font-semibold mb-6">Data Flow</h2>
+        <div class="mermaid">
+flowchart TB
+    subgraph Sources["📱 Data Sources"]
+        Gmail["📧 Gmail API"]
+        Mobile["📱 Android App"]
+    end
+    
+    subgraph Backend["⚙️ ProjectX Backend"]
+        API["FastAPI Server"]
+        Classifier["🤖 AI Classifier<br/>(VIP → Keywords → LLM)"]
+        DB[(PostgreSQL)]
+    end
+    
+    subgraph Output["📤 Output"]
+        SMS["📱 SMS Alert<br/>(Twilio)"]
+        Dashboard["🖥️ Web Dashboard"]
+    end
+    
+    Gmail -->|"Check emails"| API
+    Mobile -->|"Sync notifications"| API
+    API --> Classifier
+    Classifier --> DB
+    Classifier -->|"URGENT"| SMS
+    DB --> Dashboard
+        </div>
+    </div>
+
+    <!-- Component Details -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Data Sources -->
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span class="text-2xl">📱</span> Data Sources
+            </h3>
+            <div class="space-y-4">
+                <div class="border-l-4 border-red-500 pl-4">
+                    <p class="font-medium">Gmail API</p>
+                    <p class="text-gray-400 text-sm">OAuth 2.0 authenticated access to your inbox. Fetches full email content for accurate classification.</p>
+                </div>
+                <div class="border-l-4 border-green-500 pl-4">
+                    <p class="font-medium">Android App</p>
+                    <p class="text-gray-400 text-sm">Notification listener captures messages from WhatsApp, Instagram, Telegram, Slack, Discord, SMS, and more.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Classification Pipeline -->
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span class="text-2xl">🤖</span> Classification Pipeline
+            </h3>
+            <div class="space-y-3">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-purple-900 text-purple-300 flex items-center justify-center text-sm font-bold">1</span>
+                    <div>
+                        <p class="font-medium">VIP Check</p>
+                        <p class="text-gray-400 text-sm">Instant URGENT if sender is in VIP list</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-purple-900 text-purple-300 flex items-center justify-center text-sm font-bold">2</span>
+                    <div>
+                        <p class="font-medium">Keyword Match</p>
+                        <p class="text-gray-400 text-sm">Instant URGENT if message contains urgent keywords</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-purple-900 text-purple-300 flex items-center justify-center text-sm font-bold">3</span>
+                    <div>
+                        <p class="font-medium">LLM Analysis</p>
+                        <p class="text-gray-400 text-sm">GPT-4o-mini contextual classification via OpenRouter</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database -->
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span class="text-2xl">🗄️</span> Database
+            </h3>
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between py-2 border-b border-gray-700">
+                    <span class="text-gray-400">AlertHistory</span>
+                    <span>All notifications with classification</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-gray-700">
+                    <span class="text-gray-400">MobileDevice</span>
+                    <span>Connected Android devices</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-gray-700">
+                    <span class="text-gray-400">VIPSender</span>
+                    <span>Priority contacts</span>
+                </div>
+                <div class="flex justify-between py-2">
+                    <span class="text-gray-400">KeywordRule</span>
+                    <span>Urgent keyword triggers</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Output -->
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span class="text-2xl">📤</span> Output
+            </h3>
+            <div class="space-y-4">
+                <div class="border-l-4 border-blue-500 pl-4">
+                    <p class="font-medium">SMS Alerts (Twilio)</p>
+                    <p class="text-gray-400 text-sm">Urgent messages are forwarded to your keypad phone via SMS. Max 160 characters with app prefix.</p>
+                </div>
+                <div class="border-l-4 border-green-500 pl-4">
+                    <p class="font-medium">Web Dashboard</p>
+                    <p class="text-gray-400 text-sm">View all notifications, filter by app, manage VIP senders and keywords.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supported Apps -->
+    <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <h3 class="text-lg font-semibold mb-4">Supported Apps</h3>
+        <div class="flex flex-wrap gap-3">
+            <span class="px-4 py-2 rounded-lg text-sm font-medium" style="background-color: rgba(37, 211, 102, 0.2); color: #25D366;">WhatsApp</span>
+            <span class="px-4 py-2 rounded-lg text-sm font-medium" style="background-color: rgba(228, 64, 95, 0.2); color: #E4405F;">Instagram</span>
+            <span class="px-4 py-2 rounded-lg text-sm font-medium" style="background-color: rgba(0, 136, 204, 0.2); color: #0088cc;">Telegram</span>
+            <span class="px-4 py-2 rounded-lg text-sm font-medium" style="background-color: rgba(74, 21, 75, 0.2); color: #E01E5A;">Slack</span>
+            <span class="px-4 py-2 rounded-lg text-sm font-medium" style="background-color: rgba(88, 101, 242, 0.2); color: #5865F2;">Discord</span>
+            <span class="px-4 py-2 rounded-lg text-sm font-medium" style="background-color: rgba(0, 132, 255, 0.2); color: #0084FF;">Messenger</span>
+            <span class="px-4 py-2 rounded-lg text-sm font-medium" style="background-color: rgba(107, 114, 128, 0.2); color: #9CA3AF;">SMS</span>
+            <span class="px-4 py-2 rounded-lg text-sm font-medium" style="background-color: rgba(234, 67, 53, 0.2); color: #EA4335;">Email</span>
+        </div>
+    </div>
+</div>
+
+<!-- Mermaid.js -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'dark',
+        themeVariables: {
+            primaryColor: '#3b82f6',
+            primaryTextColor: '#f3f4f6',
+            primaryBorderColor: '#374151',
+            lineColor: '#6b7280',
+            secondaryColor: '#1f2937',
+            tertiaryColor: '#111827',
+            background: '#1f2937',
+            mainBkg: '#1f2937',
+            nodeBorder: '#374151',
+            clusterBkg: '#111827',
+            clusterBorder: '#374151',
+            titleColor: '#f3f4f6',
+            edgeLabelBackground: '#1f2937',
+        }
+    });
+</script>
+{% endblock %}

@@ -50,6 +50,38 @@ Agent Architecture:
 - isort for imports
 - Async/await for I/O operations
 
+## Modular Architecture Standards
+
+### Dependency Injection
+Always use FastAPI's dependency injection for database sessions:
+```python
+from src.api.deps import get_db, get_db_optional, verify_api_key
+
+@router.get("/path")
+async def handler(db: Session = Depends(get_db)):
+    # Use injected db session
+    pass
+```
+
+### Route Module Pattern
+Each route module should:
+1. Import dependencies from `src/api/deps.py`
+2. Import models from `src/models/schemas.py`
+3. Use `Depends()` for database and auth
+4. Stay under 100 lines
+
+### Separation of Concerns
+- Routes: HTTP handling, request/response
+- Services: Business logic, external APIs
+- CRUD: Database operations only
+- Schemas: Data validation and serialization
+
+### File Size Limits
+- Route modules: max 100 lines
+- Service modules: max 200 lines
+- CRUD modules: max 300 lines
+- Split files that exceed limits
+
 ## Testing Strategy
 - pytest for unit tests
 - pytest-asyncio for async tests

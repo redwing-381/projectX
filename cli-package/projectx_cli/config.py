@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -13,6 +14,7 @@ DEFAULT_SERVER_URL = "https://projectx-production-0eeb.up.railway.app"
 class CLIConfig(BaseModel):
     """CLI configuration model."""
     server_url: str = Field(default=DEFAULT_SERVER_URL)
+    api_key: Optional[str] = Field(default=None)
 
 
 def load_config() -> CLIConfig:
@@ -42,3 +44,20 @@ def set_server_url(url: str) -> None:
     config = load_config()
     config.server_url = url.rstrip("/")
     save_config(config)
+
+
+def get_api_key() -> Optional[str]:
+    """Get the configured API key."""
+    return load_config().api_key
+
+
+def set_api_key(api_key: str) -> None:
+    """Set the API key in configuration."""
+    config = load_config()
+    config.api_key = api_key if api_key else None
+    save_config(config)
+
+
+def is_logged_in() -> bool:
+    """Check if user is logged in (has API key)."""
+    return bool(get_api_key())
