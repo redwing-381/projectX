@@ -1,7 +1,7 @@
 """Pipeline orchestrator for email-to-SMS flow."""
 
 import logging
-from typing import Union
+from typing import Union, Optional
 
 from src.models.schemas import (
     Email,
@@ -20,8 +20,20 @@ logger = logging.getLogger(__name__)
 ClassifierType = Union[ClassifierAgent, EmailProcessingCrew]
 
 
-def save_alert_to_db(email: Email, classification, sms_sent: bool) -> None:
-    """Save alert result to database."""
+def save_alert_to_db(email: Email, classification, sms_sent: bool, demo_mode: bool = False) -> None:
+    """Save alert result to database.
+    
+    Args:
+        email: Email that was processed
+        classification: Classification result
+        sms_sent: Whether SMS was sent
+        demo_mode: If True, skip database save (demo isolation)
+    """
+    # Skip DB save in demo mode
+    if demo_mode:
+        logger.debug(f"Demo mode: skipping DB save for {email.id}")
+        return
+        
     try:
         from src.db.database import get_db_session
         from src.db import crud
@@ -77,11 +89,12 @@ class Pipeline:
         self.alert_phone = alert_phone
         self._use_crew = isinstance(classifier, EmailProcessingCrew)
 
-    async def run(self, max_emails: int = 10) -> PipelineResult:
+    async def run(self, max_emails: int = 10, demo_mode: bool = False) -> PipelineResult:
         """Execute full pipeline: fetch → classify → alert.
 
         Args:
             max_emails: Maximum number of emails to process.
+            demo_mode: If True, use sample emails and skip real SMS/DB.
 
         Returns:
             PipelineResult with all processing results.
@@ -89,18 +102,24 @@ class Pipeline:
         result = PipelineResult()
 
         try:
-            # Step 1: Fetch unread emails
-            logger.info("Fetching unread emails...")
-            emails = await self.gmail.get_unread_emails(max_results=max_emails)
+            # Step 1: Fetch emails (sample emails in demo mode)
+            if demo_mode:
+                from src.services.demo import get_sample_emails
+                logger.info("Demo mode: using sample emails")
+                emails = get_sample_emails()[:max_emails]
+            else:
+                logger.info("Fetching unread emails...")
+                emails = await self.gmail.get_unread_emails(max_results=max_emails)
+            
             result.emails_checked = len(emails)
 
             if not emails:
-                logger.info("No unread emails to process")
+                logger.info("No emails to process")
                 return result
 
             # Step 2: Classify each email and alert if urgent
             for email in emails:
-                alert_result = await self._process_email(email)
+                alert_result = await self._process_email(email, demo_mode=demo_mode)
                 result.results.append(alert_result)
 
                 if alert_result.sms_sent:
@@ -109,6 +128,7 @@ class Pipeline:
             logger.info(
                 f"Pipeline complete: {result.emails_checked} checked, "
                 f"{result.alerts_sent} alerts sent"
+                f"{' (demo mode)' if demo_mode else ''}"
             )
             return result
 
@@ -116,11 +136,12 @@ class Pipeline:
             logger.error(f"Pipeline error: {e}")
             raise
 
-    async def _process_email(self, email: Email) -> AlertResult:
+    async def _process_email(self, email: Email, demo_mode: bool = False) -> AlertResult:
         """Process a single email through classification and alerting.
 
         Args:
             email: Email to process.
+            demo_mode: If True, simulate SMS instead of sending.
 
         Returns:
             AlertResult with processing outcome.
@@ -144,22 +165,26 @@ class Pipeline:
             f"Classification: {urgency_value} - {classification.reason}"
         )
 
-        # Send SMS if urgent
+        # Send SMS if urgent (simulate in demo mode)
         sms_sent = False
         is_urgent = urgency_value == "URGENT" or urgency_value == Urgency.URGENT
         if is_urgent:
-            logger.info("Email is URGENT - sending SMS alert")
-            sms_sent = self.twilio.send_alert(email, self.alert_phone)
-
-            if sms_sent:
-                logger.info("✅ SMS alert sent successfully")
+            if demo_mode:
+                logger.info("Demo mode: simulating SMS alert (not actually sent)")
+                sms_sent = True  # Simulate success
             else:
-                logger.warning("⚠️ Failed to send SMS alert")
+                logger.info("Email is URGENT - sending SMS alert")
+                sms_sent = self.twilio.send_alert(email, self.alert_phone)
+
+                if sms_sent:
+                    logger.info("SMS alert sent successfully")
+                else:
+                    logger.warning("Failed to send SMS alert")
         else:
             logger.info("Email is not urgent - no alert needed")
 
-        # Save to database
-        save_alert_to_db(email, classification, sms_sent)
+        # Save to database (skip in demo mode)
+        save_alert_to_db(email, classification, sms_sent, demo_mode=demo_mode)
         
         # Convert urgency to enum for AlertResult
         urgency_enum = Urgency.URGENT if urgency_value == "URGENT" else Urgency.NOT_URGENT

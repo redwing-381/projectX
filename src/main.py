@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from src.config import get_settings
 from src.api.routes import router as web_router
@@ -26,9 +27,7 @@ logger = logging.getLogger(__name__)
 pipeline = None
 startup_error = None
 monitoring_task = None
-monitoring_running = False
-
-# Security
+monitoring_running = False# Security
 security = HTTPBearer(auto_error=False)
 
 
@@ -209,6 +208,11 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# Add session middleware for demo mode (must be added before other middleware)
+settings = get_settings()
+session_secret = settings.api_key or "projectx-demo-secret-key-change-in-production"
+app.add_middleware(SessionMiddleware, secret_key=session_secret, max_age=3600)
 
 # Add GZip compression for responses > 500 bytes
 app.add_middleware(GZipMiddleware, minimum_size=500)
