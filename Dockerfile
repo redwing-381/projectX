@@ -7,11 +7,14 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy all files first (needed for pyproject.toml to find README.md)
-COPY . .
+# Copy requirements first for better caching
+COPY requirements.txt .
 
-# Install Python dependencies (non-editable for production)
-RUN pip install --no-cache-dir .
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy all application files
+COPY . .
 
 # Expose port (Railway uses $PORT)
 EXPOSE 8000
