@@ -16,9 +16,9 @@
         <div style="background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px; padding: 20px;">
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #fafafa;"></span>
-                <span style="font-size: 13px; color: var(--text-muted);">Total Emails</span>
+                <span style="font-size: 13px; color: var(--text-muted);">Total Messages</span>
             </div>
-            <div style="font-size: 28px; font-weight: 700;">{{ metrics.total_emails }}</div>
+            <div style="font-size: 28px; font-weight: 700;">{{ metrics.total_messages }}</div>
         </div>
         <div style="background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px; padding: 20px;">
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
@@ -40,6 +40,38 @@
                 <span style="font-size: 13px; color: var(--text-muted);">Today</span>
             </div>
             <div style="font-size: 28px; font-weight: 700;">{{ metrics.today_emails }}<span style="font-size: 14px; color: var(--text-muted); font-weight: 400;"> / {{ metrics.today_alerts }} alerts</span></div>
+        </div>
+    </div>
+
+    <!-- Source Breakdown Cards -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+        <div style="background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px; padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: #3b82f6;"></span>
+                <span style="font-size: 12px; color: var(--text-muted);">Emails</span>
+            </div>
+            <div style="font-size: 22px; font-weight: 600;">{{ metrics.source_breakdown.email }}</div>
+        </div>
+        <div style="background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px; padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: #25d366;"></span>
+                <span style="font-size: 12px; color: var(--text-muted);">WhatsApp</span>
+            </div>
+            <div style="font-size: 22px; font-weight: 600;">{{ metrics.source_breakdown.whatsapp }}</div>
+        </div>
+        <div style="background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px; padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: #0088cc;"></span>
+                <span style="font-size: 12px; color: var(--text-muted);">Telegram</span>
+            </div>
+            <div style="font-size: 22px; font-weight: 600;">{{ metrics.source_breakdown.telegram }}</div>
+        </div>
+        <div style="background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px; padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: #a3a3a3;"></span>
+                <span style="font-size: 12px; color: var(--text-muted);">Other Apps</span>
+            </div>
+            <div style="font-size: 22px; font-weight: 600;">{{ metrics.source_breakdown.other }}</div>
         </div>
     </div>
 

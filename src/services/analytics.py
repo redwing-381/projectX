@@ -2,14 +2,14 @@
 
 from datetime import datetime, timedelta
 from typing import Optional
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, case
 from sqlalchemy.orm import Session
 
 from src.db.models import AlertHistory
 
 
 def get_emails_by_day(db: Session, days: int = 7) -> list[dict]:
-    """Get email counts grouped by day for line chart.
+    """Get message counts grouped by day for line chart.
     
     Returns: [{"date": "2026-01-19", "count": 15}, ...]
     """
@@ -47,7 +47,7 @@ def get_urgency_ratio(db: Session) -> dict:
 
 
 def get_top_senders(db: Session, limit: int = 5) -> list[dict]:
-    """Get top senders by email count for bar chart.
+    """Get top senders by message count for bar chart.
     
     Returns: [{"sender": "boss@company.com", "count": 12}, ...]
     """
@@ -65,12 +65,42 @@ def get_top_senders(db: Session, limit: int = 5) -> list[dict]:
     return [{"sender": _extract_email(r.sender), "count": r.count} for r in results]
 
 
+def get_source_breakdown(db: Session) -> dict:
+    """Get message counts by source (email, whatsapp, telegram, etc).
+    
+    Returns: {"email": 50, "whatsapp": 30, "telegram": 10, "other": 5}
+    """
+    results = (
+        db.query(
+            AlertHistory.source,
+            func.count(AlertHistory.id).label("count")
+        )
+        .group_by(AlertHistory.source)
+        .all()
+    )
+    
+    breakdown = {"email": 0, "whatsapp": 0, "telegram": 0, "other": 0}
+    
+    for r in results:
+        source = r.source or "email"
+        if source == "email":
+            breakdown["email"] += r.count
+        elif "whatsapp" in source.lower():
+            breakdown["whatsapp"] += r.count
+        elif "telegram" in source.lower():
+            breakdown["telegram"] += r.count
+        else:
+            breakdown["other"] += r.count
+    
+    return breakdown
+
+
 def get_summary_metrics(db: Session) -> dict:
     """Get key metrics for dashboard cards.
     
-    Returns: {"total_emails": 200, "total_alerts": 25, "alert_rate": 12.5}
+    Returns: {"total_messages": 200, "total_alerts": 25, "alert_rate": 12.5, ...}
     """
-    total_emails = db.query(func.count(AlertHistory.id)).scalar() or 0
+    total_messages = db.query(func.count(AlertHistory.id)).scalar() or 0
     
     total_alerts = (
         db.query(func.count(AlertHistory.id))
@@ -78,11 +108,11 @@ def get_summary_metrics(db: Session) -> dict:
         .scalar() or 0
     )
     
-    alert_rate = (total_alerts / total_emails * 100) if total_emails > 0 else 0.0
+    alert_rate = (total_alerts / total_messages * 100) if total_messages > 0 else 0.0
     
     # Get today's stats
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    today_emails = (
+    today_messages = (
         db.query(func.count(AlertHistory.id))
         .filter(AlertHistory.created_at >= today_start)
         .scalar() or 0
@@ -94,12 +124,17 @@ def get_summary_metrics(db: Session) -> dict:
         .scalar() or 0
     )
     
+    # Get source breakdown
+    source_breakdown = get_source_breakdown(db)
+    
     return {
-        "total_emails": total_emails,
+        "total_emails": source_breakdown["email"],
+        "total_messages": total_messages,
         "total_alerts": total_alerts,
         "alert_rate": round(alert_rate, 1),
-        "today_emails": today_emails,
+        "today_emails": today_messages,
         "today_alerts": today_alerts,
+        "source_breakdown": source_breakdown,
     }
 
 

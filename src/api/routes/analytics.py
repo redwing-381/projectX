@@ -18,12 +18,18 @@ templates = Jinja2Templates(directory="src/templates")
 @router.get("/analytics", response_class=HTMLResponse)
 async def analytics_page(request: Request, db: Session | None = Depends(get_db_optional)):
     """Render analytics dashboard page."""
+    empty_breakdown = {"email": 0, "whatsapp": 0, "telegram": 0, "other": 0}
+    
     if db is None:
         return templates.TemplateResponse("analytics.html", {
             "request": request,
             "active_page": "analytics",
             "has_data": False,
-            "metrics": {"total_emails": 0, "total_alerts": 0, "alert_rate": 0, "today_emails": 0, "today_alerts": 0},
+            "metrics": {
+                "total_emails": 0, "total_messages": 0, "total_alerts": 0, 
+                "alert_rate": 0, "today_emails": 0, "today_alerts": 0,
+                "source_breakdown": empty_breakdown
+            },
             "emails_by_day": [],
             "urgency_ratio": {"urgent": 0, "not_urgent": 0},
             "top_senders": [],
@@ -34,11 +40,15 @@ async def analytics_page(request: Request, db: Session | None = Depends(get_db_o
         emails_by_day = analytics.get_emails_by_day(db, days=7)
         urgency_ratio = analytics.get_urgency_ratio(db)
         top_senders = analytics.get_top_senders(db, limit=5)
-        has_data = metrics["total_emails"] > 0
+        has_data = metrics["total_messages"] > 0
     except Exception as e:
         logger.error(f"Analytics error: {e}")
         has_data = False
-        metrics = {"total_emails": 0, "total_alerts": 0, "alert_rate": 0, "today_emails": 0, "today_alerts": 0}
+        metrics = {
+            "total_emails": 0, "total_messages": 0, "total_alerts": 0, 
+            "alert_rate": 0, "today_emails": 0, "today_alerts": 0,
+            "source_breakdown": empty_breakdown
+        }
         emails_by_day = []
         urgency_ratio = {"urgent": 0, "not_urgent": 0}
         top_senders = []
