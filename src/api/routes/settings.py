@@ -38,6 +38,9 @@ async def settings_page(request: Request, db: Session | None = Depends(get_db_op
     api_key_configured = bool(settings.api_key)
     mobile_enabled_count = 0
     mobile_monitoring_enabled = False
+    quiet_hours = {"enabled": False, "start": 22, "end": 7}
+    rate_limit = {"enabled": False, "max_per_hour": 10}
+    sms_last_hour = 0
     
     if db is not None:
         try:
@@ -49,6 +52,9 @@ async def settings_page(request: Request, db: Session | None = Depends(get_db_op
             devices = crud.get_all_devices(db)
             last_sync = crud.get_last_sync_time(db)
             mobile_notification_count = crud.get_total_mobile_notifications(db)
+            quiet_hours = crud.get_quiet_hours(db)
+            rate_limit = crud.get_rate_limit(db)
+            sms_last_hour = crud.get_sms_count_last_hour(db)
             
             # Calculate mobile monitoring status
             mobile_enabled_count = sum(1 for d in devices if getattr(d, 'monitoring_enabled', True))
@@ -72,6 +78,9 @@ async def settings_page(request: Request, db: Session | None = Depends(get_db_op
         "api_key_configured": api_key_configured,
         "mobile_enabled_count": mobile_enabled_count,
         "mobile_monitoring_enabled": mobile_monitoring_enabled,
+        "quiet_hours": quiet_hours,
+        "rate_limit": rate_limit,
+        "sms_last_hour": sms_last_hour,
     })
 
 
@@ -169,5 +178,42 @@ async def toggle_mobile_monitoring(db: Session | None = Depends(get_db_optional)
             logger.info(f"Mobile monitoring {'enabled' if new_state else 'disabled'} for all devices")
         except Exception as e:
             logger.error(f"Could not toggle mobile monitoring: {e}")
+    
+    return RedirectResponse("/settings", status_code=303)
+
+
+@router.post("/settings/set-quiet-hours")
+async def set_quiet_hours(
+    enabled: str = Form("off"),
+    start: int = Form(22),
+    end: int = Form(7),
+    db: Session | None = Depends(get_db_optional),
+):
+    """Set quiet hours settings."""
+    if db is not None:
+        try:
+            is_enabled = enabled == "on"
+            crud.set_quiet_hours(db, is_enabled, start, end)
+            logger.info(f"Quiet hours {'enabled' if is_enabled else 'disabled'} ({start}:00 - {end}:00)")
+        except Exception as e:
+            logger.error(f"Could not set quiet hours: {e}")
+    
+    return RedirectResponse("/settings", status_code=303)
+
+
+@router.post("/settings/set-rate-limit")
+async def set_rate_limit(
+    enabled: str = Form("off"),
+    max_per_hour: int = Form(10),
+    db: Session | None = Depends(get_db_optional),
+):
+    """Set rate limit settings."""
+    if db is not None:
+        try:
+            is_enabled = enabled == "on"
+            crud.set_rate_limit(db, is_enabled, max_per_hour)
+            logger.info(f"Rate limit {'enabled' if is_enabled else 'disabled'} ({max_per_hour}/hour)")
+        except Exception as e:
+            logger.error(f"Could not set rate limit: {e}")
     
     return RedirectResponse("/settings", status_code=303)

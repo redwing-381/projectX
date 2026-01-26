@@ -272,6 +272,89 @@ def set_check_interval(db: Session, minutes: int) -> None:
 
 
 # =============================================================================
+# Quiet Hours Settings
+# =============================================================================
+
+def get_quiet_hours(db: Session) -> dict:
+    """Get quiet hours settings.
+    
+    Returns:
+        {"enabled": bool, "start": int (hour 0-23), "end": int (hour 0-23)}
+    """
+    enabled = get_setting(db, "quiet_hours_enabled", "false").lower() == "true"
+    start = int(get_setting(db, "quiet_hours_start", "22"))
+    end = int(get_setting(db, "quiet_hours_end", "7"))
+    return {"enabled": enabled, "start": start, "end": end}
+
+
+def set_quiet_hours(db: Session, enabled: bool, start: int = 22, end: int = 7) -> None:
+    """Set quiet hours settings."""
+    set_setting(db, "quiet_hours_enabled", "true" if enabled else "false")
+    set_setting(db, "quiet_hours_start", str(start))
+    set_setting(db, "quiet_hours_end", str(end))
+
+
+def is_quiet_hours(db: Session) -> bool:
+    """Check if current time is within quiet hours."""
+    settings = get_quiet_hours(db)
+    if not settings["enabled"]:
+        return False
+    
+    from datetime import datetime
+    current_hour = datetime.now().hour
+    start = settings["start"]
+    end = settings["end"]
+    
+    # Handle overnight quiet hours (e.g., 22:00 to 07:00)
+    if start > end:
+        return current_hour >= start or current_hour < end
+    else:
+        return start <= current_hour < end
+
+
+# =============================================================================
+# Rate Limiting Settings
+# =============================================================================
+
+def get_rate_limit(db: Session) -> dict:
+    """Get rate limit settings.
+    
+    Returns:
+        {"enabled": bool, "max_per_hour": int}
+    """
+    enabled = get_setting(db, "rate_limit_enabled", "false").lower() == "true"
+    max_per_hour = int(get_setting(db, "rate_limit_max_per_hour", "10"))
+    return {"enabled": enabled, "max_per_hour": max_per_hour}
+
+
+def set_rate_limit(db: Session, enabled: bool, max_per_hour: int = 10) -> None:
+    """Set rate limit settings."""
+    set_setting(db, "rate_limit_enabled", "true" if enabled else "false")
+    set_setting(db, "rate_limit_max_per_hour", str(max_per_hour))
+
+
+def get_sms_count_last_hour(db: Session) -> int:
+    """Get count of SMS sent in the last hour."""
+    from datetime import datetime, timedelta
+    one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+    
+    return db.query(func.count(AlertHistory.id)).filter(
+        AlertHistory.sms_sent == True,
+        AlertHistory.created_at >= one_hour_ago,
+    ).scalar() or 0
+
+
+def is_rate_limited(db: Session) -> bool:
+    """Check if SMS sending is rate limited."""
+    settings = get_rate_limit(db)
+    if not settings["enabled"]:
+        return False
+    
+    count = get_sms_count_last_hour(db)
+    return count >= settings["max_per_hour"]
+
+
+# =============================================================================
 # Mobile Device Operations
 # =============================================================================
 

@@ -110,6 +110,32 @@ class Pipeline:
         self.alert_phone = alert_phone
         self._use_crew = isinstance(classifier, EmailProcessingCrew)
 
+    def _check_sms_restrictions(self) -> Optional[str]:
+        """Check if SMS sending is restricted by quiet hours or rate limits.
+        
+        Returns:
+            Reason string if blocked, None if allowed
+        """
+        try:
+            from src.db.database import get_db_session
+            from src.db import crud
+            
+            with get_db_session() as db:
+                # Check quiet hours
+                if crud.is_quiet_hours(db):
+                    quiet = crud.get_quiet_hours(db)
+                    return f"Quiet hours active ({quiet['start']}:00 - {quiet['end']}:00)"
+                
+                # Check rate limit
+                if crud.is_rate_limited(db):
+                    limit = crud.get_rate_limit(db)
+                    return f"Rate limit reached ({limit['max_per_hour']}/hour)"
+                
+            return None
+        except Exception as e:
+            logger.debug(f"Could not check SMS restrictions: {e}")
+            return None
+
     async def run(self, max_emails: int = 10, demo_mode: bool = False) -> PipelineResult:
         """Execute full pipeline: fetch → classify → alert.
 
@@ -206,19 +232,27 @@ class Pipeline:
 
         # Send SMS if urgent (simulate in demo mode)
         sms_sent = False
+        sms_blocked_reason = None
         is_urgent = urgency_value == "URGENT" or urgency_value == Urgency.URGENT
         if is_urgent:
             if demo_mode:
                 logger.info("Demo mode: simulating SMS alert (not actually sent)")
                 sms_sent = True  # Simulate success
             else:
-                logger.info("Email is URGENT - sending SMS alert")
-                sms_sent = self.twilio.send_alert(email, self.alert_phone)
-
-                if sms_sent:
-                    logger.info("SMS alert sent successfully")
+                # Check quiet hours and rate limits
+                sms_blocked_reason = self._check_sms_restrictions()
+                
+                if sms_blocked_reason:
+                    logger.info(f"SMS blocked: {sms_blocked_reason}")
+                    sms_sent = False
                 else:
-                    logger.warning("Failed to send SMS alert")
+                    logger.info("Email is URGENT - sending SMS alert")
+                    sms_sent = self.twilio.send_alert(email, self.alert_phone)
+
+                    if sms_sent:
+                        logger.info("SMS alert sent successfully")
+                    else:
+                        logger.warning("Failed to send SMS alert")
         else:
             logger.info("Email is not urgent - no alert needed")
 

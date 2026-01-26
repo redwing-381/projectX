@@ -205,6 +205,79 @@
                 <form action="/test-urgent" method="post" style="margin: 0;">
                     <button type="submit" class="btn btn-secondary">Test SMS Alert</button>
                 </form>
+                <a href="/history?format=csv" class="btn btn-secondary">Export History (CSV)</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- SMS Controls -->
+    <div style="background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px; margin-bottom: 24px;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid var(--sidebar-border);">
+            <h3 style="font-size: 15px; font-weight: 600; margin: 0;">SMS Controls</h3>
+        </div>
+        <div style="padding: 20px;">
+            <p style="color: var(--text-secondary); font-size: 13px; margin: 0 0 20px 0;">Control when SMS alerts are sent to avoid disturbances.</p>
+            
+            <!-- Quiet Hours -->
+            <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--sidebar-border);">
+                <form action="/settings/set-quiet-hours" method="post">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%;" class="{% if quiet_hours.enabled %}status-dot-active{% else %}status-dot-inactive{% endif %}"></span>
+                            <div>
+                                <h4 style="font-weight: 500; margin: 0; font-size: 14px;">Quiet Hours</h4>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 2px 0 0 0;">No SMS alerts during these hours</p>
+                            </div>
+                        </div>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" name="enabled" value="on" {% if quiet_hours.enabled %}checked{% endif %} style="width: 16px; height: 16px;">
+                            <span style="font-size: 13px; color: var(--text-muted);">Enable</span>
+                        </label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <label style="color: var(--text-muted); font-size: 13px;">From:</label>
+                        <select name="start" style="background: var(--bg-tertiary); border: 1px solid var(--sidebar-border); border-radius: 6px; padding: 6px 10px; color: var(--text-primary); font-size: 13px;">
+                            {% for h in range(24) %}
+                            <option value="{{ h }}" {% if quiet_hours.start == h %}selected{% endif %}>{{ '%02d' % h }}:00</option>
+                            {% endfor %}
+                        </select>
+                        <label style="color: var(--text-muted); font-size: 13px;">To:</label>
+                        <select name="end" style="background: var(--bg-tertiary); border: 1px solid var(--sidebar-border); border-radius: 6px; padding: 6px 10px; color: var(--text-primary); font-size: 13px;">
+                            {% for h in range(24) %}
+                            <option value="{{ h }}" {% if quiet_hours.end == h %}selected{% endif %}>{{ '%02d' % h }}:00</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-primary" style="padding: 6px 14px; font-size: 12px;">Save</button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Rate Limit -->
+            <div>
+                <form action="/settings/set-rate-limit" method="post">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%;" class="{% if rate_limit.enabled %}status-dot-active{% else %}status-dot-inactive{% endif %}"></span>
+                            <div>
+                                <h4 style="font-weight: 500; margin: 0; font-size: 14px;">Rate Limit</h4>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 2px 0 0 0;">Limit SMS per hour ({{ sms_last_hour }} sent in last hour)</p>
+                            </div>
+                        </div>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" name="enabled" value="on" {% if rate_limit.enabled %}checked{% endif %} style="width: 16px; height: 16px;">
+                            <span style="font-size: 13px; color: var(--text-muted);">Enable</span>
+                        </label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <label style="color: var(--text-muted); font-size: 13px;">Max per hour:</label>
+                        <select name="max_per_hour" style="background: var(--bg-tertiary); border: 1px solid var(--sidebar-border); border-radius: 6px; padding: 6px 10px; color: var(--text-primary); font-size: 13px;">
+                            {% for n in [5, 10, 15, 20, 30, 50] %}
+                            <option value="{{ n }}" {% if rate_limit.max_per_hour == n %}selected{% endif %}>{{ n }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-primary" style="padding: 6px 14px; font-size: 12px;">Save</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
