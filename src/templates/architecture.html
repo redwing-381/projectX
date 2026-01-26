@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Architecture - ProjectX{% endblock %}
+{% block content %}
+<style>
+.arch-hero{background:linear-gradient(135deg,rgba(34,197,94,0.05) 0%,rgba(59,130,246,0.05) 100%);border:1px solid var(--sidebar-border);border-radius:16px;padding:32px;margin-bottom:24px;text-align:center}
+.arch-hero h1{font-size:28px;font-weight:700;margin:0 0 8px 0}
+.arch-hero p{color:var(--text-secondary);font-size:15px;margin:0}
+.status-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+@media(max-width:900px){.status-grid{grid-template-columns:repeat(3,1fr)}}
+.status-card{background:var(--bg-secondary);border:1px solid var(--sidebar-border);border-radius:10px;padding:16px;text-align:center}
+.status-card .icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+.status-card .label{font-size:11px;color:var(--text-muted);text-transform:uppercase}
+.status-card .value{font-size:14px;font-weight:600;margin-top:4px}
+.status-online{color:#22c55e}
+.status-offline{color:#ef4444}
+.arch-section{background:var(--bg-secondary);border:1px solid var(--sidebar-border);border-radius:12px;margin-bottom:24px;overflow:hidden}
+.arch-section-header{padding:20px 24px;border-bottom:1px solid var(--sidebar-border);display:flex;align-items:center;justify-content:space-between}
+.arch-section-title{font-size:16px;font-weight:600;margin:0}
+.arch-section-badge{font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(34,197,94,0.1);color:#22c55e;font-weight:500}
+.arch-section-body{padding:24px}
+.system-diagram{display:flex;flex-direction:column;gap:24px}
+.diagram-row{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.diagram-box{background:var(--bg-tertiary);border:2px solid var(--sidebar-border);border-radius:12px;padding:20px 24px;text-align:center;min-width:140px;transition:all 0.2s}
+.diagram-box:hover{border-color:#22c55e;transform:translateY(-2px)}
+.diagram-box.highlight{border-color:#22c55e;background:rgba(34,197,94,0.05)}
+.diagram-box .title{font-size:14px;font-weight:600}
+.diagram-box .subtitle{font-size:11px;color:var(--text-muted);margin-top:4px}
+.diagram-arrow{color:var(--text-muted);font-size:20px}
+.diagram-arrow-down{display:flex;justify-content:center;color:var(--text-muted);font-size:24px}
+.diagram-group{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.diagram-box.small{padding:14px 18px;min-width:100px}
+.diagram-box.small .title{font-size:12px}
+.pipeline-visual{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:20px 0}
+.pipeline-step{flex:1;min-width:160px;position:relative}
+.pipeline-step:not(:last-child)::after{content:'→';position:absolute;right:-8px;top:50%;transform:translateY(-50%);font-size:20px;color:var(--text-muted);z-index:1}
+.pipeline-card{background:var(--bg-tertiary);border:1px solid var(--sidebar-border);border-radius:10px;padding:20px;margin-right:16px;height:100%;transition:all 0.2s}
+.pipeline-step:last-child .pipeline-card{margin-right:0}
+.pipeline-card:hover{border-color:#22c55e;transform:translateY(-2px)}
+.pipeline-num{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-bottom:12px}
+.pipeline-card .title{font-size:14px;font-weight:600;margin-bottom:6px}
+.pipeline-card .desc{font-size:12px;color:var(--text-secondary);line-height:1.5}
+.pipeline-card .tag{display:inline-block;font-size:10px;padding:3px 8px;border-radius:4px;margin-top:10px;font-weight:500}
+.tag-instant{background:rgba(34,197,94,0.1);color:#22c55e}
+.tag-ai{background:rgba(59,130,246,0.1);color:#3b82f6}
+.tag-realtime{background:rgba(245,158,11,0.1);color:#f59e0b}
+.tech-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:900px){.tech-grid{grid-template-columns:repeat(2,1fr)}}
+.tech-card{display:flex;align-items:center;gap:14px;padding:16px;background:var(--bg-tertiary);border:1px solid var(--sidebar-border);border-radius:10px;transition:all 0.2s}
+.tech-card:hover{border-color:var(--text-muted);transform:translateY(-1px)}
+.tech-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.tech-info .name{font-size:14px;font-weight:600}
+.tech-info .role{font-size:11px;color:var(--text-muted);margin-top:2px}
+.platforms-flex{display:flex;flex-wrap:wrap;gap:10px}
+.platform-chip{display:flex;align-items:center;gap:10px;padding:12px 18px;background:var(--bg-tertiary);border:1px solid var(--sidebar-border);border-radius:8px;transition:all 0.2s}
+.platform-chip:hover{border-color:var(--text-muted)}
+.platform-dot{width:10px;height:10px;border-radius:50%}
+.platform-name{font-size:13px;font-weight:500}
+.api-list{display:flex;flex-direction:column;gap:8px}
+.api-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg-tertiary);border-radius:8px;font-family:monospace;font-size:13px}
+.api-method{padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;min-width:50px;text-align:center}
+.api-method.get{background:rgba(34,197,94,0.15);color:#22c55e}
+.api-method.post{background:rgba(59,130,246,0.15);color:#3b82f6}
+.api-path{color:var(--text-primary)}
+.api-desc{color:var(--text-muted);margin-left:auto;font-size:12px}
+.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:800px){.metrics-row{grid-template-columns:repeat(2,1fr)}}
+.metric-card{background:var(--bg-tertiary);border-radius:10px;padding:20px;text-align:center}
+.metric-value{font-size:32px;font-weight:700;color:#22c55e}
+.metric-label{font-size:12px;color:var(--text-muted);margin-top:4px}
+.metric-unit{font-size:14px;font-weight:400;color:var(--text-muted)}
+</style>
+<div class="arch-hero"><h1>System Architecture</h1><p>Real-time notification intelligence powered by AI</p></div>
+<div class="status-grid">
+<div class="status-card"><div class="icon" style="background:rgba(34,197,94,0.1)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div class="label">Server</div><div class="value status-online">Online</div></div>
+<div class="status-card"><div class="icon" style="background:rgba(59,130,246,0.1)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div><div class="label">Database</div><div class="value {% if db_connected %}status-online{% else %}status-offline{% endif %}">{% if db_connected %}Connected{% else %}Offline{% endif %}</div></div>
+<div class="status-card"><div class="icon" style="background:rgba(245,158,11,0.1)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div><div class="label">Devices</div><div class="value">{{ device_count }}</div></div>
+<div class="status-card"><div class="icon" style="background:rgba(139,92,246,0.1)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="label">Messages</div><div class="value">{{ total_messages }}</div></div>
+<div class="status-card"><div class="icon" style="background:rgba(239,68,68,0.1)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/></svg></div><div class="label">Alerts</div><div class="value">{{ total_alerts }}</div></div>
+</div>
+<div class="arch-section"><div class="arch-section-header"><h2 class="arch-section-title">System Overview</h2><span class="arch-section-badge">Live</span></div><div class="arch-section-body"><div class="system-diagram">
+<div class="diagram-row"><div class="diagram-group"><div class="diagram-box small"><div class="title">Gmail</div><div class="subtitle">Email API</div></div><div class="diagram-box small"><div class="title">WhatsApp</div><div class="subtitle">Android</div></div><div class="diagram-box small"><div class="title">Telegram</div><div class="subtitle">Android</div></div><div class="diagram-box small"><div class="title">Other Apps</div><div class="subtitle">Android</div></div></div></div>
+<div class="diagram-arrow-down">↓</div>
+<div class="diagram-row"><div class="diagram-box highlight"><div class="title">FastAPI Backend</div><div class="subtitle">Async Processing Engine</div></div></div>
+<div class="diagram-arrow-down">↓</div>
+<div class="diagram-row"><div class="diagram-box"><div class="title">VIP Check</div><div class="subtitle">Rule Engine</div></div><div class="diagram-arrow">→</div><div class="diagram-box"><div class="title">Keywords</div><div class="subtitle">Pattern Match</div></div><div class="diagram-arrow">→</div><div class="diagram-box highlight"><div class="title">GPT-4o-mini</div><div class="subtitle">AI Classifier</div></div></div>
+<div class="diagram-arrow-down">↓</div>
+<div class="diagram-row"><div class="diagram-box"><div class="title">PostgreSQL</div><div class="subtitle">History & Analytics</div></div><div class="diagram-arrow">→</div><div class="diagram-box highlight"><div class="title">Twilio SMS</div><div class="subtitle">Alert Delivery</div></div><div class="diagram-arrow">→</div><div class="diagram-box"><div class="title">Keypad Phone</div><div class="subtitle">User Device</div></div></div>
+</div></div></div>
+<div class="arch-section"><div class="arch-section-header"><h2 class="arch-section-title">Classification Pipeline</h2><span class="arch-section-badge">5 Stages</span></div><div class="arch-section-body"><div class="pipeline-visual">
+<div class="pipeline-step"><div class="pipeline-card"><div class="pipeline-num">1</div><div class="title">Deduplication</div><div class="desc">Check if already processed</div><span class="tag tag-instant">Instant</span></div></div>
+<div class="pipeline-step"><div class="pipeline-card"><div class="pipeline-num">2</div><div class="title">VIP Check</div><div class="desc">VIP senders bypass AI</div><span class="tag tag-instant">Instant</span></div></div>
+<div class="pipeline-step"><div class="pipeline-card"><div class="pipeline-num">3</div><div class="title">Keyword Scan</div><div class="desc">Scan for urgent keywords</div><span class="tag tag-instant">Instant</span></div></div>
+<div class="pipeline-step"><div class="pipeline-card"><div class="pipeline-num">4</div><div class="title">AI Analysis</div><div class="desc">GPT-4o-mini evaluates</div><span class="tag tag-ai">AI Powered</span></div></div>
+<div class="pipeline-step"><div class="pipeline-card"><div class="pipeline-num">5</div><div class="title">SMS Dispatch</div><div class="desc">Send via Twilio</div><span class="tag tag-realtime">Real-time</span></div></div>
+</div></div></div>
+<div class="arch-section"><div class="arch-section-header"><h2 class="arch-section-title">Performance Targets</h2></div><div class="arch-section-body"><div class="metrics-row">
+<div class="metric-card"><div class="metric-value">&lt;5<span class="metric-unit">s</span></div><div class="metric-label">Email Fetch</div></div>
+<div class="metric-card"><div class="metric-value">&lt;3<span class="metric-unit">s</span></div><div class="metric-label">AI Classification</div></div>
+<div class="metric-card"><div class="metric-value">&lt;30<span class="metric-unit">s</span></div><div class="metric-label">End-to-End</div></div>
+<div class="metric-card"><div class="metric-value">99<span class="metric-unit">%</span></div><div class="metric-label">Uptime Target</div></div>
+</div></div></div>
+<div class="arch-section"><div class="arch-section-header"><h2 class="arch-section-title">Technology Stack</h2></div><div class="arch-section-body"><div class="tech-grid">
+<div class="tech-card"><div class="tech-icon" style="background:rgba(55,118,171,0.15);color:#3776AB">PY</div><div class="tech-info"><div class="name">Python 3.11+</div><div class="role">Runtime</div></div></div>
+<div class="tech-card"><div class="tech-icon" style="background:rgba(0,150,136,0.15);color:#009688">FA</div><div class="tech-info"><div class="name">FastAPI</div><div class="role">Web Framework</div></div></div>
+<div class="tech-card"><div class="tech-icon" style="background:rgba(51,103,145,0.15);color:#336791">PG</div><div class="tech-info"><div class="name">PostgreSQL</div><div class="role">Database</div></div></div>
+<div class="tech-card"><div class="tech-icon" style="background:rgba(116,170,156,0.15);color:#74AA9C">AI</div><div class="tech-info"><div class="name">GPT-4o-mini</div><div class="role">LLM Classifier</div></div></div>
+<div class="tech-card"><div class="tech-icon" style="background:rgba(234,67,53,0.15);color:#EA4335">GM</div><div class="tech-info"><div class="name">Gmail API</div><div class="role">Email Source</div></div></div>
+<div class="tech-card"><div class="tech-icon" style="background:rgba(241,78,50,0.15);color:#F14E32">TW</div><div class="tech-info"><div class="name">Twilio</div><div class="role">SMS Gateway</div></div></div>
+<div class="tech-card"><div class="tech-icon" style="background:rgba(15,14,71,0.15);color:#6366f1">RW</div><div class="tech-info"><div class="name">Railway</div><div class="role">Cloud Hosting</div></div></div>
+<div class="tech-card"><div class="tech-icon" style="background:rgba(61,220,132,0.15);color:#3DDC84">AD</div><div class="tech-info"><div class="name">Android</div><div class="role">Mobile Client</div></div></div>
+</div></div></div>
+<div class="arch-section"><div class="arch-section-header"><h2 class="arch-section-title">API Endpoints</h2></div><div class="arch-section-body"><div class="api-list">
+<div class="api-item"><span class="api-method get">GET</span><span class="api-path">/health</span><span class="api-desc">Health check</span></div>
+<div class="api-item"><span class="api-method post">POST</span><span class="api-path">/check</span><span class="api-desc">Trigger email check</span></div>
+<div class="api-item"><span class="api-method post">POST</span><span class="api-path">/api/notifications</span><span class="api-desc">Mobile sync</span></div>
+<div class="api-item"><span class="api-method get">GET</span><span class="api-path">/api/analytics/data</span><span class="api-desc">Analytics JSON</span></div>
+<div class="api-item"><span class="api-method post">POST</span><span class="api-path">/test-urgent</span><span class="api-desc">Test SMS</span></div>
+</div></div></div>
+<div class="arch-section"><div class="arch-section-header"><h2 class="arch-section-title">Supported Platforms</h2><span class="arch-section-badge">8 Sources</span></div><div class="arch-section-body"><div class="platforms-flex">
+<div class="platform-chip"><span class="platform-dot" style="background:#EA4335"></span><span class="platform-name">Gmail</span></div>
+<div class="platform-chip"><span class="platform-dot" style="background:#25D366"></span><span class="platform-name">WhatsApp</span></div>
+<div class="platform-chip"><span class="platform-dot" style="background:#0088cc"></span><span class="platform-name">Telegram</span></div>
+<div class="platform-chip"><span class="platform-dot" style="background:#E4405F"></span><span class="platform-name">Instagram</span></div>
+<div class="platform-chip"><span class="platform-dot" style="background:#4A154B"></span><span class="platform-name">Slack</span></div>
+<div class="platform-chip"><span class="platform-dot" style="background:#5865F2"></span><span class="platform-name">Discord</span></div>
+<div class="platform-chip"><span class="platform-dot" style="background:#0084FF"></span><span class="platform-name">Messenger</span></div>
+<div class="platform-chip"><span class="platform-dot" style="background:#6B7280"></span><span class="platform-name">SMS</span></div>
+</div></div></div>
+{% endblock %}
