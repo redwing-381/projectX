@@ -20,6 +20,27 @@ logger = logging.getLogger(__name__)
 ClassifierType = Union[ClassifierAgent, EmailProcessingCrew]
 
 
+def is_already_processed(email_id: str) -> bool:
+    """Check if email has already been processed.
+    
+    Args:
+        email_id: Email ID to check
+        
+    Returns:
+        True if already processed, False otherwise
+    """
+    try:
+        from src.db.database import get_db_session
+        from src.db import crud
+        
+        with get_db_session() as db:
+            existing = crud.get_alert_by_email_id(db, email_id)
+            return existing is not None
+    except Exception as e:
+        logger.debug(f"Could not check for duplicate (DB not configured): {e}")
+        return False
+
+
 def save_alert_to_db(email: Email, classification, sms_sent: bool, demo_mode: bool = False) -> None:
     """Save alert result to database.
     
@@ -117,7 +138,25 @@ class Pipeline:
                 logger.info("No emails to process")
                 return result
 
-            # Step 2: Classify each email and alert if urgent
+            # Step 2: Filter out already-processed emails (skip in demo mode)
+            if not demo_mode:
+                new_emails = []
+                for email in emails:
+                    if is_already_processed(email.id):
+                        logger.debug(f"Skipping already processed email: {email.id}")
+                    else:
+                        new_emails.append(email)
+                
+                skipped = len(emails) - len(new_emails)
+                if skipped > 0:
+                    logger.info(f"Skipped {skipped} already-processed emails")
+                emails = new_emails
+
+            if not emails:
+                logger.info("No new emails to process")
+                return result
+
+            # Step 3: Classify each email and alert if urgent
             for email in emails:
                 alert_result = await self._process_email(email, demo_mode=demo_mode)
                 result.results.append(alert_result)
