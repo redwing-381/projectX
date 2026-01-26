@@ -308,6 +308,11 @@ async def test_urgent(authenticated: bool = Depends(verify_api_key)):
         else:
             classification = await pipeline.classifier.classify(test_email)
 
+        # Handle both enum and string urgency values
+        urgency_value = classification.urgency
+        if hasattr(urgency_value, 'value'):
+            urgency_value = urgency_value.value
+
         result = {
             "email": {
                 "sender": test_email.sender,
@@ -315,7 +320,7 @@ async def test_urgent(authenticated: bool = Depends(verify_api_key)):
                 "snippet": test_email.snippet,
             },
             "classification": {
-                "urgency": classification.urgency.value,
+                "urgency": urgency_value,
                 "reason": classification.reason,
             },
             "sms_sent": False,
@@ -323,7 +328,7 @@ async def test_urgent(authenticated: bool = Depends(verify_api_key)):
         }
 
         # Try to send SMS if classified as urgent
-        if classification.urgency.value == "URGENT":
+        if urgency_value == "URGENT":
             try:
                 sent = pipeline.twilio.send_alert(test_email, pipeline.alert_phone)
                 result["sms_sent"] = sent
