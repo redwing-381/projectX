@@ -120,9 +120,9 @@
 
     <!-- Chart Data (passed via data attributes to avoid linter issues with Jinja2 in JS) -->
     <div id="chart-data" 
-         data-emails-by-day="{{ emails_by_day | tojson | e }}"
-         data-urgency-ratio="{{ urgency_ratio | tojson | e }}"
-         data-top-senders="{{ top_senders | tojson | e }}"
+         data-emails-by-day='{{ emails_by_day | tojson }}'
+         data-urgency-ratio='{{ urgency_ratio | tojson }}'
+         data-top-senders='{{ top_senders | tojson }}'
          style="display: none;"></div>
 
     <!-- Chart.js from CDN -->
