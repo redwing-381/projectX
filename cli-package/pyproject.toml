@@ -1,6 +1,6 @@
 [project]
 name = "projectx-cli"
-version = "0.1.0"
+version = "0.2.1"
 description = "CLI for ProjectX - Smart notification bridge that monitors email and sends SMS alerts"
 readme = "README.md"
 requires-python = ">=3.9"
