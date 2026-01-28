@@ -1433,3 +1433,69 @@ rm token.json
 - Gmail fetch: Non-blocking (async with thread pool)
 
 ---
+
+
+## January 28, 2026
+
+### UI Polish & Analytics Improvements
+
+**Changes Completed:**
+
+1. **Neutral Color Palette:**
+   - Changed from purple/blue gradient to neutral gray scheme
+   - Accent color now white (#fafafa) instead of purple
+   - Matches professional tools like Notion, GitHub, Linear
+   - CSS variables updated in `base.html`
+
+2. **Contrast Fixes:**
+   - Fixed white-on-white text issues throughout UI
+   - Demo button, banner, and pipeline markers now have dark text
+   - Filter tabs and mobile header icons properly visible
+
+3. **Analytics Page Source Breakdown:**
+   - Added new row showing message counts by source:
+     - Emails (blue dot)
+     - WhatsApp (green dot)
+     - Telegram (blue dot)
+     - Other Apps (gray dot)
+   - Changed "Total Emails" to "Total Messages" (counts all sources)
+   - Fixed Jinja2 linter errors by moving data to HTML data attributes
+
+4. **Linter Error Fixes:**
+   - `analytics.html` - Moved `{{ data | tojson }}` from inline JS to data attributes
+   - Pattern: `<div id="chart-data" data-foo="{{ foo | tojson | e }}">` then parse in JS
+
+**Files Modified:**
+- `src/templates/base.html` - Neutral color palette CSS variables
+- `src/templates/dashboard.html` - Contrast fixes for demo elements
+- `src/templates/analytics.html` - Source breakdown cards, linter fix
+- `src/templates/architecture.html` - Pipeline marker contrast
+- `src/templates/notifications.html` - Filter tab contrast
+- `src/services/analytics.py` - Added `get_source_breakdown()` function
+- `src/api/routes/analytics.py` - Pass source_breakdown to template
+
+### Project Status - Ready for Demo
+
+**Core Features Working:**
+- ✅ Gmail monitoring with AI urgency classification
+- ✅ SMS alerts via Twilio for urgent messages
+- ✅ Mobile app integration (WhatsApp/Telegram/other notifications)
+- ✅ VIP senders & keyword rules (stored in PostgreSQL)
+- ✅ Analytics dashboard with source breakdown
+- ✅ Professional UI (neutral gray theme, no emojis)
+- ✅ CLI tool (`projectx` command)
+- ✅ Architecture visualization page
+
+**Known Issues:**
+- Gmail token needs re-auth (expired) - delete `token.json` and restart
+- Twilio credentials need updating in Railway env vars
+- Mobile app DNS issues on some networks (works with VPN/Cloudflare DNS)
+
+**Demo Tips:**
+1. Use "Demo Mode" button on dashboard to simulate full flow
+2. Add VIP sender or keyword, then run demo to show rule-based classification
+3. Show analytics page for source breakdown visualization
+4. Show architecture page to explain the AI agent flow
+5. CLI commands: `projectx status`, `projectx check`, `projectx monitor status`
+
+---
