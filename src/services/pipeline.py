@@ -13,6 +13,7 @@ from src.services.gmail import GmailService
 from src.services.twilio_sms import TwilioService
 from src.agents.classifier import ClassifierAgent
 from src.agents.crew import EmailProcessingCrew
+from src.db import crud
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +31,42 @@ def is_already_processed(email_id: str) -> bool:
         True if already processed, False otherwise
     """
     try:
-        from src.db.database import get_db_session
-        from src.db import crud
+        from src.db.database import get_db_session, engine
+        
+        # Check if database is available
+        if engine is None:
+            logger.warning("Database not available for duplicate check")
+            return False
         
         with get_db_session() as db:
             existing = crud.get_alert_by_email_id(db, email_id)
-            return existing is not None
+            if existing:
+                logger.debug(f"Email {email_id} already processed (found in DB)")
+                return True
+            return False
     except Exception as e:
-        logger.debug(f"Could not check for duplicate (DB not configured): {e}")
+        logger.warning(f"Duplicate check failed (treating as new): {e}")
         return False
+
+
+# In-memory cache for recently processed emails (backup for DB failures)
+_processed_cache: set = set()
+_cache_max_size = 1000
+
+
+def mark_as_processed(email_id: str) -> None:
+    """Mark email as processed in memory cache."""
+    global _processed_cache
+    _processed_cache.add(email_id)
+    # Trim cache if too large
+    if len(_processed_cache) > _cache_max_size:
+        # Remove oldest entries (convert to list, slice, convert back)
+        _processed_cache = set(list(_processed_cache)[-500:])
+
+
+def is_in_cache(email_id: str) -> bool:
+    """Check if email is in the in-memory processed cache."""
+    return email_id in _processed_cache
 
 
 def save_alert_to_db(email: Email, classification, sms_sent: bool, demo_mode: bool = False) -> None:
@@ -50,14 +78,20 @@ def save_alert_to_db(email: Email, classification, sms_sent: bool, demo_mode: bo
         sms_sent: Whether SMS was sent
         demo_mode: If True, skip database save (demo isolation)
     """
+    # Always mark in cache (even in demo mode for safety)
+    mark_as_processed(email.id)
+    
     # Skip DB save in demo mode
     if demo_mode:
         logger.debug(f"Demo mode: skipping DB save for {email.id}")
         return
         
     try:
-        from src.db.database import get_db_session
-        from src.db import crud
+        from src.db.database import get_db_session, engine
+        
+        if engine is None:
+            logger.warning(f"Database not available, email {email.id} only cached in memory")
+            return
         
         with get_db_session() as db:
             # Check if already exists
@@ -83,7 +117,7 @@ def save_alert_to_db(email: Email, classification, sms_sent: bool, demo_mode: bo
             )
             logger.debug(f"Saved alert to database: {email.id}")
     except Exception as e:
-        logger.debug(f"Could not save to database (DB not configured): {e}")
+        logger.warning(f"Could not save to database: {e}")
 
 
 class Pipeline:
@@ -168,7 +202,8 @@ class Pipeline:
             if not demo_mode:
                 new_emails = []
                 for email in emails:
-                    if is_already_processed(email.id):
+                    # Check both database AND in-memory cache
+                    if is_already_processed(email.id) or is_in_cache(email.id):
                         logger.debug(f"Skipping already processed email: {email.id}")
                     else:
                         new_emails.append(email)
