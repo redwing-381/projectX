@@ -90,7 +90,7 @@
         <!-- Emails by Day Chart -->
         <div style="background: var(--bg-secondary); border: 1px solid var(--sidebar-border); border-radius: 12px;">
             <div style="padding: 16px 20px; border-bottom: 1px solid var(--sidebar-border);">
-                <h3 style="font-size: 15px; font-weight: 600; margin: 0;">Emails by Day (Last 7 Days)</h3>
+                <h3 style="font-size: 15px; font-weight: 600; margin: 0;">Messages by Day (Last 7 Days)</h3>
             </div>
             <div style="padding: 20px; height: 280px;">
                 <canvas id="emailsByDayChart"></canvas>
@@ -128,93 +128,108 @@
     <!-- Chart.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
-        (function() {
+        document.addEventListener('DOMContentLoaded', function() {
             var dataEl = document.getElementById('chart-data');
-            var emailsByDayData = JSON.parse(dataEl.dataset.emailsByDay);
-            var urgencyData = JSON.parse(dataEl.dataset.urgencyRatio);
-            var topSendersData = JSON.parse(dataEl.dataset.topSenders);
+            if (!dataEl) return;
+            
+            try {
+                var emailsByDayData = JSON.parse(dataEl.dataset.emailsByDay || '[]');
+                var urgencyData = JSON.parse(dataEl.dataset.urgencyRatio || '{"urgent":0,"not_urgent":0}');
+                var topSendersData = JSON.parse(dataEl.dataset.topSenders || '[]');
 
-            var chartColors = {
-                primary: '#fafafa',
-                danger: '#ef4444',
-                success: '#22c55e',
-                warning: '#f59e0b',
-                neutral: '#a3a3a3',
-                gray: '#525252'
-            };
+                var chartColors = {
+                    primary: '#fafafa',
+                    danger: '#ef4444',
+                    success: '#22c55e',
+                    warning: '#f59e0b',
+                    neutral: '#a3a3a3',
+                    gray: '#525252'
+                };
 
-            // Emails by Day Line Chart
-            new Chart(document.getElementById('emailsByDayChart'), {
-                type: 'line',
-                data: {
-                    labels: emailsByDayData.map(function(d) { return d.date.slice(5); }),
-                    datasets: [{
-                        label: 'Emails',
-                        data: emailsByDayData.map(function(d) { return d.count; }),
-                        borderColor: chartColors.primary,
-                        backgroundColor: 'rgba(250, 250, 250, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 4,
-                        pointBackgroundColor: chartColors.primary
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717a' } },
-                        x: { grid: { display: false }, ticks: { color: '#71717a' } }
-                    }
+                // Emails by Day Line Chart
+                var emailsCtx = document.getElementById('emailsByDayChart');
+                if (emailsCtx) {
+                    new Chart(emailsCtx, {
+                        type: 'line',
+                        data: {
+                            labels: emailsByDayData.map(function(d) { return d.date.slice(5); }),
+                            datasets: [{
+                                label: 'Messages',
+                                data: emailsByDayData.map(function(d) { return d.count; }),
+                                borderColor: chartColors.primary,
+                                backgroundColor: 'rgba(250, 250, 250, 0.1)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 4,
+                                pointBackgroundColor: chartColors.primary
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717a' } },
+                                x: { grid: { display: false }, ticks: { color: '#71717a' } }
+                            }
+                        }
+                    });
                 }
-            });
 
-            // Urgency Ratio Doughnut Chart
-            new Chart(document.getElementById('urgencyChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['Urgent', 'Not Urgent'],
-                    datasets: [{
-                        data: [urgencyData.urgent, urgencyData.not_urgent],
-                        backgroundColor: [chartColors.danger, chartColors.gray],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: '#a1a1aa', padding: 16 } }
-                    },
-                    cutout: '65%'
+                // Urgency Ratio Doughnut Chart
+                var urgencyCtx = document.getElementById('urgencyChart');
+                if (urgencyCtx) {
+                    new Chart(urgencyCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Urgent', 'Not Urgent'],
+                            datasets: [{
+                                data: [urgencyData.urgent, urgencyData.not_urgent],
+                                backgroundColor: [chartColors.danger, chartColors.gray],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'bottom', labels: { color: '#a1a1aa', padding: 16 } }
+                            },
+                            cutout: '65%'
+                        }
+                    });
                 }
-            });
 
-            // Top Senders Bar Chart
-            new Chart(document.getElementById('topSendersChart'), {
-                type: 'bar',
-                data: {
-                    labels: topSendersData.map(function(d) { return d.sender.length > 25 ? d.sender.slice(0, 22) + '...' : d.sender; }),
-                    datasets: [{
-                        label: 'Emails',
-                        data: topSendersData.map(function(d) { return d.count; }),
-                        backgroundColor: chartColors.neutral,
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y',
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717a' } },
-                        y: { grid: { display: false }, ticks: { color: '#a1a1aa' } }
-                    }
+                // Top Senders Bar Chart
+                var sendersCtx = document.getElementById('topSendersChart');
+                if (sendersCtx) {
+                    new Chart(sendersCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: topSendersData.map(function(d) { return d.sender.length > 25 ? d.sender.slice(0, 22) + '...' : d.sender; }),
+                            datasets: [{
+                                label: 'Messages',
+                                data: topSendersData.map(function(d) { return d.count; }),
+                                backgroundColor: chartColors.neutral,
+                                borderRadius: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            indexAxis: 'y',
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717a' } },
+                                y: { grid: { display: false }, ticks: { color: '#a1a1aa' } }
+                            }
+                        }
+                    });
                 }
-            });
-        })();
+            } catch (e) {
+                console.error('Chart initialization error:', e);
+            }
+        });
     </script>
     {% else %}
     <!-- Empty State -->
