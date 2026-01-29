@@ -97,6 +97,10 @@ I didn't.
 
 Instead of fighting API restrictions, I built an **Android app that captures notifications** using `NotificationListenerService`. This means I can monitor *any* messaging app — WhatsApp, Telegram, Instagram, Slack, Discord — without API access and without ban risk.
 
+<div align="center">
+<img src="docs/images/android_app.png" alt="Android App" width="300"/>
+</div>
+
 ---
 
 ## Quick Start

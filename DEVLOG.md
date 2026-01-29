@@ -294,6 +294,10 @@ projectx logout  # Remove saved key
 
 **Solution:** Built an Android app using `NotificationListenerService` to capture notifications from ANY app.
 
+<div align="center">
+<img src="docs/images/android_app.png" alt="Android App" width="300"/>
+</div>
+
 ```
 mobile-app/
 ├── MainActivity.kt
