@@ -1,399 +1,198 @@
+<div align="center">
+
 # ProjectX
 
-**Smart Notification Bridge for Focus Mode**
+### *Remove distractions, not smartphones.*
 
-ProjectX monitors your Gmail inbox and Android app notifications (WhatsApp, Telegram, etc.), uses AI to detect urgent messages, and forwards alerts via SMS to a basic keypad phone. Stay focused during work hours without missing critical communications.
+**AI-powered notification bridge that forwards urgent messages to your keypad phone via SMS.**
 
----
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?style=for-the-badge)](https://projectx-solai.up.railway.app)
+[![PyPI](https://img.shields.io/pypi/v/projectx-cli?style=for-the-badge&label=CLI)](https://pypi.org/project/projectx-cli/)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [API Reference](#api-reference)
-- [Mobile App](#mobile-app)
-- [Deployment](#deployment)
-- [Development](#development)
-- [License](#license)
+</div>
 
 ---
 
-## Overview
+## Why I Built This
 
-### The Problem
+I know this is subjective — smartphones are incredibly helpful. But they come with huge distractions.
 
-You want to focus during work hours. Smartphones are distracting. But you can't miss urgent emails or messages from college, work, or family.
+I'm a final-year student currently doing my internship. When I go to the office, I'd love to carry just a keypad phone. But the problem? I might miss emails from college, important messages from parents, or updates from Discord.
 
-### The Solution
+So I built ProjectX.
 
-A smart notification bridge that:
+The name isn't fancy because this isn't a consumer product — I built it for my personal use. I just picked a random name and started solving my problem.
 
-1. **Monitors** your Gmail inbox and Android app notifications in real-time
-2. **Classifies** each message using AI (GPT-4o-mini) with VIP/keyword fast-path
-3. **Alerts** you via SMS when something is truly urgent
-4. **Gives you control** via CLI, web dashboard, and mobile app
+**The core idea isn't to remove smartphones from my life. I just wanted to remove distractions.**
 
----
+Most keypad phones support SMS and calls. I thought — why not use this as a bridge? So I built a backend with AI agents that monitor email, plus an Android app that captures notifications from any messaging app. The system predicts priority based on your custom rules, and if something is urgent, it sends an SMS to your keypad phone.
 
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| Multi-Source Monitoring | Gmail + Android notifications (WhatsApp, Telegram, Slack, Discord, SMS, Messenger) |
-| AI Classification | GPT-4o-mini powered urgency detection with VIP sender and keyword fast-path |
-| SMS Alerts | Twilio integration sends condensed alerts to any phone |
-| Web Dashboard | Analytics, history, VIP/keyword management, architecture visualization |
-| CLI Tool | Terminal commands for status checks and monitoring control |
-| Mobile App | Native Android app for notification capture and sync |
-| Cross-Platform Control | Start/stop monitoring from any interface (Web, CLI, Mobile) |
+I feel happy carrying a compact device in my pocket when I go out. You can keep your smartphone in your bag or at home — it's up to you.
 
 ---
 
-## Architecture
+## System Architecture
 
-```
-┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│   Data Sources   │────▶│   FastAPI        │────▶│  AI Classifier   │────▶│   SMS Alert      │
-│                  │     │   Backend        │     │  (GPT-4o-mini)   │     │   (Twilio)       │
-│  - Gmail API     │     │                  │     │                  │     │                  │
-│  - Android App   │     │  - REST API      │     │  - VIP Check     │     │  - Format SMS    │
-│                  │     │  - Web Dashboard │     │  - Keyword Match │     │  - Send to Phone │
-└──────────────────┘     └────────┬─────────┘     │  - LLM Fallback  │     └──────────────────┘
-                                  │               └──────────────────┘
-                         ┌────────▼─────────┐
-                         │   PostgreSQL     │
-                         │                  │
-                         │  - Alert History │
-                         │  - VIP Senders   │
-                         │  - Keywords      │
-                         │  - Devices       │
-                         └──────────────────┘
+<div align="center">
+<img src="docs/images/projectx_architecture.png" alt="ProjectX Architecture" width="900"/>
+</div>
+
+---
+
+## The Classification Pipeline
+
+Messages go through a 3-stage intelligent filter:
+
+<div align="center">
+<img src="docs/images/classification.png" alt="Classification Pipeline" width="900"/>
+</div>
+
+| Stage | Speed | What It Checks |
+|:-----:|:-----:|:---------------|
+| **1. VIP** | Instant | Is sender in your VIP list? |
+| **2. Keywords** | Instant | Contains "urgent", "deadline", etc.? |
+| **3. AI** | ~2 sec | GPT-4o analyzes context and tone |
+
+If Stage 1 or 2 matches → **URGENT** (instant, no AI needed)  
+Otherwise → AI decides based on content
+
+---
+
+## The Office Problem
+
+Another issue I face: when I'm at the office, I use company resources for development. I can't log into personal email, and there are lots of restrictions.
+
+**Solution?** I built a Python CLI and published it on PyPI:
+
+<div align="center">
+<img src="docs/images/cli.png" alt="CLI Tool" width="700"/>
+</div>
+
+```bash
+pip install projectx-cli
+projectx status
+projectx check
 ```
 
-### Classification Pipeline
+Now I can check status and modify config from any terminal. Plus there's a web dashboard that stays in sync.
 
+---
+
+## Analytics Dashboard
+
+Track message sources, urgency trends, and classification history — all in one place.
+
+<div align="center">
+<img src="docs/images/analytics.png" alt="Analytics Dashboard" width="900"/>
+</div>
+
+---
+
+## The WhatsApp Problem (And How I Solved It)
+
+WhatsApp doesn't have a personal messaging API. Neither does Instagram DMs. Most projects stop here.
+
+I didn't.
+
+Instead of fighting API restrictions, I built an **Android app that captures notifications** using `NotificationListenerService`. This means I can monitor *any* messaging app — WhatsApp, Telegram, Instagram, Slack, Discord — without API access and without ban risk.
+
+---
+
+## Quick Start
+
+**Option 1: Use the CLI** (easiest)
+```bash
+pip install projectx-cli
+projectx login
+projectx status
 ```
-Incoming Message
-       │
-       ▼
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  VIP Check   │────▶│   Keyword    │────▶│     LLM      │
-│  (instant)   │     │   Match      │     │  Analysis    │
-└──────────────┘     └──────────────┘     └──────────────┘
-       │                    │                    │
-       ▼                    ▼                    ▼
-   URGENT              URGENT              URGENT/NOT_URGENT
+
+**Option 2: Self-host**
+```bash
+git clone https://github.com/redwing-381/projectx
+cd projectx
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env  # Add your API keys
+uvicorn src.main:app --reload
 ```
 
 ---
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Backend | FastAPI (Python 3.11) |
-| AI/LLM | GPT-4o-mini via OpenRouter |
-| AI Framework | CrewAI (with fallback classifier) |
-| Database | PostgreSQL |
-| SMS | Twilio API |
-| Email | Gmail API (OAuth 2.0) |
-| Mobile | Native Android (Kotlin) |
-| CLI | Typer + Rich |
-| Deployment | Railway |
+<div align="center">
+
+| Layer | Technology |
+|:-----:|:----------:|
+| **AI** | GPT-4o-mini via OpenRouter |
+| **Backend** | FastAPI + PostgreSQL |
+| **Mobile** | Native Android (Kotlin) |
+| **CLI** | Typer + Rich |
+| **SMS** | Twilio |
+| **Deploy** | Railway |
+
+</div>
 
 ---
 
-## Getting Started
+## Four Ways to Access
 
-### Prerequisites
+<div align="center">
 
-- Python 3.11 or 3.12 (NOT 3.13 due to CrewAI compatibility)
-- Gmail account with API access
-- Twilio account for SMS
-- OpenRouter API key (or OpenAI)
-- PostgreSQL database
+| Interface | Use Case |
+|:---------:|:---------|
+| 🌐 **Web** | Dashboard, analytics, configure VIP senders & keywords |
+| 💻 **CLI** | Quick checks from office terminal |
+| 📱 **Mobile** | Capture notifications from any app |
+| 🔌 **API** | Programmatic access with authentication |
 
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/redwing-381/projectx
-cd projectx
-
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -e ".[dev]"
-
-# Copy environment template
-cp .env.example .env
-```
-
-### Quick Start
-
-```bash
-# Start the server
-source .venv/bin/activate && uvicorn src.main:app --reload --port 8000
-
-# Access the dashboard
-open http://localhost:8000
-```
+</div>
 
 ---
 
-## Configuration
+## What's Next
 
-### Environment Variables
-
-Create a `.env` file with the following variables:
-
-```bash
-# Required
-LLM_API_KEY=your-openrouter-or-openai-key
-LLM_BASE_URL=https://openrouter.ai/api/v1
-LLM_MODEL=openai/gpt-4o-mini
-DATABASE_URL=postgresql://user:pass@host:5432/dbname
-API_KEY=your-generated-api-key
-
-# Gmail OAuth
-GMAIL_CREDENTIALS_FILE=credentials.json
-
-# SMS Alerts
-TWILIO_ACCOUNT_SID=your-twilio-sid
-TWILIO_AUTH_TOKEN=your-twilio-token
-TWILIO_PHONE_NUMBER=+1234567890
-ALERT_PHONE_NUMBER=+0987654321
-```
-
-### Gmail Setup
-
-1. Create a project in [Google Cloud Console](https://console.cloud.google.com)
-2. Enable Gmail API
-3. Create OAuth 2.0 credentials (Desktop app)
-4. Download `credentials.json` to project root
-5. Run the server and complete OAuth flow in browser
+After this hackathon, I'm thinking of extending capabilities:
+- Use the **calling function** on keypad phones to control the system
+- **Reply to messages** via voice commands
+- Build it into a full **personal assistant agent**
 
 ---
 
-## Usage
+## Built With Kiro
 
-### Web Dashboard
+This project was built using Kiro's spec-driven development:
 
-Access at `http://localhost:8000` (or your deployed URL):
-
-- **Dashboard** - Stats, recent alerts, quick actions
-- **Notifications** - Filter by source (WhatsApp, Email, etc.)
-- **History** - Paginated alert history with filters
-- **VIP Senders** - Manage priority contacts
-- **Keywords** - Configure urgency trigger words
-- **Architecture** - System visualization
-- **Settings** - Monitoring controls, device management
-- **Analytics** - Charts and source breakdown
-
-### CLI Tool
-
-Install from PyPI:
-
-```bash
-pip install projectx-cli
-```
-
-Commands:
-
-```bash
-# Authentication
-projectx login              # Enter API key
-projectx logout             # Remove saved key
-
-# Status
-projectx status             # Server and pipeline status
-projectx help               # List all commands
-
-# Email Operations
-projectx check              # Trigger email check
-projectx test               # Send test urgent SMS
-
-# Monitoring Control
-projectx monitor status     # Show monitoring status
-projectx monitor start      # Enable email monitoring
-projectx monitor stop       # Disable email monitoring
-projectx monitor start --all  # Start all platforms
-projectx monitor stop --all   # Stop all platforms
-projectx monitor set-interval 5  # Set check interval (minutes)
-
-# Configuration
-projectx config show        # Display configuration
-projectx config set-url URL # Set server URL
-```
-
----
-
-## API Reference
-
-### Public Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Health check |
-| GET | `/status` | Pipeline status |
-
-### Protected Endpoints (require API key)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/check` | Trigger email check |
-| POST | `/test-urgent` | Send test SMS |
-| GET | `/api/monitoring` | Get monitoring status |
-| POST | `/api/monitoring/start` | Enable monitoring |
-| POST | `/api/monitoring/stop` | Disable monitoring |
-| POST | `/api/monitoring/interval` | Set check interval |
-| GET | `/api/monitoring/unified` | Get all platform status |
-| POST | `/api/monitoring/start-all` | Start all platforms |
-| POST | `/api/monitoring/stop-all` | Stop all platforms |
-| POST | `/api/notifications` | Mobile app notification sync |
-
-### Authentication
-
-Include API key in request header:
-
-```
-Authorization: Bearer your-api-key
-```
-
----
-
-## Mobile App
-
-The Android app captures notifications from messaging apps and syncs them to the backend.
-
-### Supported Apps
-
-- WhatsApp
-- Instagram
-- Telegram
-- Slack
-- Discord
-- Facebook Messenger
-- SMS
-
-### Features
-
-- Notification capture via `NotificationListenerService`
-- Local queuing with duplicate detection
-- Background sync via WorkManager
-- Configurable sync interval
-- Remote start/stop from web/CLI
-
-### Setup
-
-1. Build APK from `mobile-app/` directory
-2. Install on Android device
-3. Grant notification access permission
-4. Configure server URL and API key
-5. Select apps to monitor
-
-See `mobile-app/README.md` for detailed instructions.
-
----
-
-## Deployment
-
-### Railway
-
-The project is configured for Railway deployment:
-
-```bash
-# railway.toml is pre-configured
-railway up
-```
-
-Required environment variables in Railway dashboard:
-
-- `LLM_API_KEY`
-- `LLM_BASE_URL`
-- `LLM_MODEL`
-- `DATABASE_URL` (auto-provisioned with PostgreSQL add-on)
-- `API_KEY`
-- `TWILIO_ACCOUNT_SID`
-- `TWILIO_AUTH_TOKEN`
-- `TWILIO_PHONE_NUMBER`
-- `ALERT_PHONE_NUMBER`
-
-### Docker
-
-```bash
-docker build -t projectx .
-docker run -p 8000:8000 --env-file .env projectx
-```
-
----
-
-## Development
-
-### Project Structure
-
-```
-projectx/
-├── src/
-│   ├── agents/          # AI classification agents
-│   ├── api/
-│   │   ├── deps.py      # Shared dependencies
-│   │   └── routes/      # Modular route handlers
-│   ├── db/              # Database models and CRUD
-│   ├── models/          # Pydantic schemas
-│   ├── services/        # Gmail, Twilio, pipeline
-│   └── templates/       # Jinja2 HTML templates
-├── cli/                 # Typer CLI application
-├── cli-package/         # PyPI distributable CLI
-├── mobile-app/          # Android notification monitor
-├── tests/               # Property-based tests
-└── .kiro/               # Kiro IDE configuration
-```
-
-### Running Tests
-
-```bash
-source .venv/bin/activate && pytest
-```
-
-### Code Style
-
-```bash
-# Format code
-black src/ cli/ tests/
-isort src/ cli/ tests/
-
-# Type checking
-mypy src/
-```
-
-### Known Issues
-
-- Python 3.13 is not supported (CrewAI/LiteLLM compatibility)
-- Gmail token expires periodically - delete `token.json` to re-authenticate
-- Some networks block Railway DNS - use Cloudflare DNS (1.1.1.1) or VPN
-
----
-
-## License
-
-MIT
+- 8 feature specs (requirements → design → tasks)
+- 17 property-based tests with Hypothesis
+- Steering documents kept 8,000+ lines consistent
 
 ---
 
 ## Links
 
-- **Live Demo**: https://projectx-solai.up.railway.app
-- **CLI Package**: https://pypi.org/project/projectx-cli/
-- **Development Log**: See `DEVLOG.md` for detailed development history
+<div align="center">
+
+| Resource | URL |
+|:--------:|:----|
+| 🌐 Live Demo | https://projectx-solai.up.railway.app |
+| 📦 CLI Package | https://pypi.org/project/projectx-cli/ |
+| 📝 Dev Log | [DEVLOG.md](DEVLOG.md) |
+
+</div>
 
 ---
 
-Built for the Dynamous + Kiro Hackathon 2026
+<div align="center">
+
+**Built for the Dynamous + Kiro Hackathon 2026**
+
+*Stay focused. Stay reachable.*
+
+---
+
+Thanks for reading! Feel free to check out the links and share your thoughts.
+
+</div>
